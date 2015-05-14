@@ -1,0 +1,14 @@
+{
+    "encodingConfig" : {
+        "componentsMultipleOccurrences" : false,
+        "phantomComponents" : true,
+        "repairBooleanConst" : false,
+        "repairIntegerConst" : false,
+        "level" : "linear"
+    },
+    "simplification" : false,
+    "spaceReduction": true,
+    "componentLevel" : "constants",
+    "solverBound" : 3,
+    "solverTimeout" : 50000
+}
