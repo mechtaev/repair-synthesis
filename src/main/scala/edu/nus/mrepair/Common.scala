@@ -1,4 +1,4 @@
-package edu.nus.mrepair.vcc
+package edu.nus.mrepair
 
 import edu.nus.mrepair.synthesis.{ProgramFormula, Formula, ComponentFormula}
 import Formula._
@@ -59,4 +59,17 @@ case class BenchmarkExecutionResult(benchmark: String,
                                     localization: Boolean,
                                     locations: Int,
                                     solverStat: SolverStat)
+
+// AngelicFix definitions
+
+object AngelicFix {
+
+  case class AngelicValue(context: List[(ProgramVariable, IExpr)], v: IExpr, stmtId: Int)
+
+  case class AngelicPath(test: List[TestData], values: List[AngelicValue])
+
+  type AngelicForest = List[AngelicPath]
+
+}
+
 

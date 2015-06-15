@@ -1,18 +1,18 @@
 package edu.nus.mrepair.vcc.drivers
 
-import edu.nus.mrepair.vcc.BenchmarkExecutionResult
+import edu.nus.mrepair.BenchmarkExecutionResult
 import edu.nus.mrepair.synthesis.ProgramFormula._
 import edu.nus.mrepair.synthesis.ProgramFormula.ConstantConversion._
-import edu.nus.mrepair.vcc.VCCBenchmark
+import edu.nus.mrepair.VCCBenchmark
 import edu.nus.mrepair.synthesis.EncodingConfig
-import edu.nus.mrepair.vcc.SynthesisConfig
+import edu.nus.mrepair.SynthesisConfig
 import edu.nus.mrepair.synthesis.Linear
 import edu.nus.mrepair.vcc.VCCRepair
-import edu.nus.mrepair.vcc.SuspiciousLocations
-import edu.nus.mrepair.vcc.TestData
-import edu.nus.mrepair.vcc.SynthesisAST
+import edu.nus.mrepair.SuspiciousLocations
+import edu.nus.mrepair.TestData
+import edu.nus.mrepair.SynthesisAST
 import edu.nus.mrepair.vcc.translation.SMTParser
-import edu.nus.mrepair.vcc.SMTlibAST
+import edu.nus.mrepair.SMTlibAST
 import edu.nus.mrepair.Utils
 import org.smtlib.IExpr
 import java.io.File

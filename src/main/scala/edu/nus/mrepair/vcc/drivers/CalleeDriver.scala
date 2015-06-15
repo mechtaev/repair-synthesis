@@ -4,12 +4,13 @@ import edu.nus.mrepair.synthesis.ProgramFormula
 import ProgramFormula._
 import ProgramFormula.ConstantConversion._
 import java.io.File
+import edu.nus.mrepair._
 import edu.nus.mrepair.Utils
-import edu.nus.mrepair.vcc.{SynthesisAST, SuspiciousLocations, VCCRepair, VCCBenchmark}
+import edu.nus.mrepair.{SynthesisAST, SuspiciousLocations, VCCBenchmark}
 import edu.nus.mrepair.synthesis.{EncodingConfig, Linear}
-import edu.nus.mrepair.vcc.SuspiciousLocations
-import edu.nus.mrepair.vcc.SynthesisConfig
-import edu.nus.mrepair.vcc.BenchmarkExecutionResult
+import edu.nus.mrepair.SynthesisConfig
+import edu.nus.mrepair.BenchmarkExecutionResult
+import edu.nus.mrepair.vcc.VCCRepair
 
 object CalleeDriver extends AbstractDriver {
 

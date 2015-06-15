@@ -5,14 +5,15 @@ import edu.nus.mrepair.synthesis.ProgramFormula
 import ProgramFormula._
 import ProgramFormula.ConstantConversion._
 import java.io.File
+import edu.nus.mrepair._
 import edu.nus.mrepair.vcc._
 import scala.collection.JavaConverters._
 import edu.nus.mrepair.Utils
 import edu.nus.mrepair.synthesis.{EncodingConfig, Linear}
-import edu.nus.mrepair.vcc.SuspiciousLocations
+import edu.nus.mrepair.SuspiciousLocations
 import edu.nus.mrepair.synthesis.EncodingConfig
-import edu.nus.mrepair.vcc.VCCBenchmark
-import edu.nus.mrepair.vcc.SynthesisAST
+import edu.nus.mrepair.VCCBenchmark
+import edu.nus.mrepair.SynthesisAST
 import edu.nus.vctrans.ast.DefineFunAst
 import edu.nus.vctrans.ast.DeclareFunAst
 import edu.nus.mrepair.vcc.translation.SMTParser

@@ -8,9 +8,9 @@ import Argonaut._
 import argonaut.EncodeJson
 import edu.nus.mrepair.synthesis._
 import edu.nus.mrepair.decision.SolverStat
-import edu.nus.mrepair.vcc.SynthesisConfig
-import edu.nus.mrepair.vcc.BenchmarkExecutionResult
-import edu.nus.mrepair.vcc.SuspiciousLocations
+import edu.nus.mrepair.SynthesisConfig
+import edu.nus.mrepair.BenchmarkExecutionResult
+import edu.nus.mrepair.SuspiciousLocations
 import argonaut.JString
 
 object Report {

@@ -1,8 +1,8 @@
 package edu.nus.mrepair.vcc.translation
 
 import edu.nus.mrepair.vcc.translation.TranslationCommon._
-import edu.nus.mrepair.vcc.SuspiciousLocations
-import edu.nus.mrepair.vcc.SynthesisConfig
+import edu.nus.mrepair.SuspiciousLocations
+import edu.nus.mrepair.SynthesisConfig
 import edu.nus.mrepair.vcc.VCCUtils._
 import org.smtlib.IExpr
 import org.smtlib.IExpr._
