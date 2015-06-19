@@ -64,11 +64,11 @@ case class BenchmarkExecutionResult(benchmark: String,
 
 object AngelicFix {
 
-  case class AngelicValue(context: List[(ProgramVariable, IExpr)], v: IExpr, stmtId: Int)
+  case class AngelicValue(context: List[(ProgramVariable, Int)], value: Int, stmtId: Int)
 
-  case class AngelicPath(test: List[TestData], values: List[AngelicValue])
+  type AngelicPath = List[AngelicValue]
 
-  type AngelicForest = List[AngelicPath]
+  type AngelicForest = Map[String, List[AngelicPath]]
 
 }
 
