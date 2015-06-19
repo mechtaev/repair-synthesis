@@ -41,6 +41,8 @@ object AFRepair {
     val solver = new Sat() with Z3
     solver.init(None)
 
+    var repairedTests: List[String] = Nil
+
     testSuiteIds.map({ case id => af += id -> Nil })
     smtFiles.map({
       case file =>
@@ -65,19 +67,28 @@ object AFRepair {
               val inputAssertion = in.map({
                 case (name, value) =>
                   val varName = "af_input_int_" + name
-                  s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                  if(afVars.contains(varName)) {
+                    s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                  } else {
+                    ""
+                  }
               }).mkString("\n")
 
               val outputAssertion = out.map({
                 case (name, value) =>
                   val varName = "af_output_int_" + name
-                  s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                  if(afVars.contains(varName)) {
+                    s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                  } else {
+                    ""
+                  }
               }).mkString("\n")
 
               val ending = "\n(check-sat)\n(exit)"
               val clauses = solver.z3.parseSMTLIB2String(formula + inputAssertion + outputAssertion + getter + ending, Array(), Array(), Array(), Array())
               solver.solveAndGetModel(Nil, clauses :: Nil) match {
                 case Some((_, model)) =>
+                  repairedTests = testId :: repairedTests
                   val result = afVars.map({
                     case varName =>
                       val auxName = "aux_" + varName
@@ -92,6 +103,12 @@ object AFRepair {
         }
     })
     solver.delete()
+
+    if (repairedTests.distinct.length == testSuiteIds.length) {
+      println("REPAIRED")
+    } else {
+      println("FAILED")
+    }
 
     af.toList.toMap
   }
