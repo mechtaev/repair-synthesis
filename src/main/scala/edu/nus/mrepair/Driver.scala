@@ -68,7 +68,7 @@ object Driver {
     // println(Report.toString(result))
 
     val testUniverseDir :: testSuiteStr :: configFile :: extractedFile :: smtFiles = args.toList
-    val testSuiteIds = testSuiteStr.split(" ").toList
+    val testSuiteIds = testSuiteStr.split("\\s+").toList
     val config = Report.parseConfig(new File(configFile))
     val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
     //println(angelicForest)

@@ -21,6 +21,13 @@ object AFRepair {
     ???
   }
 
+  def debugMode(): Boolean = {
+    sys.env.get("AF_DEBUG") match {
+      case None => false
+      case _ => true
+    }
+  }
+
   def getAvailableSymbols(formula: String, solver: MaxSMT with Z3): List[String] = {
     val origClauses = solver.z3.parseSMTLIB2String(formula + "\n(check-sat)\n(exit)", Array(), Array(), Array(), Array())
     solver.solveAndGetModel(Nil, origClauses :: Nil) match {
@@ -46,7 +53,7 @@ object AFRepair {
     testSuiteIds.map({ case id => af += id -> Nil })
     smtFiles.map({
       case file =>
-        println("-----------------------\nchecking path " + file)
+        if (debugMode()) println("-----------------------\nchecking path " + file)
         val formula = scala.io.Source.fromFile(file).mkString
         val afVars = getAvailableSymbols(formula, solver)
         solver.solver.reset()
@@ -61,14 +68,14 @@ object AFRepair {
           testSuiteIds.map({
             case testId =>
 
-              println("test case " + testId)
+              if (debugMode()) print("test " + testId + ": ")
               val (in, out) = getTestData(testUniverseDir, testId)
 
               val inputAssertion = in.map({
                 case (name, value) =>
                   val varName = "af_input_int_" + name
                   if(afVars.contains(varName)) {
-                    s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                    s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
                     ""
                   }
@@ -78,7 +85,7 @@ object AFRepair {
                 case (name, value) =>
                   val varName = "af_output_int_" + name
                   if(afVars.contains(varName)) {
-                    s"(assert (= (_ bv$value 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                    s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
                     ""
                   }
@@ -92,11 +99,22 @@ object AFRepair {
                   val result = afVars.map({
                     case varName =>
                       val auxName = "aux_" + varName
-                      val value = model.eval(solver.z3.mkBVConst(auxName, 32), false).asInstanceOf[BitVecNum].getInt
+                      val raw_value = model.eval(solver.z3.mkBVConst(auxName, 32), false)
+                      val value =
+                        try {
+                          raw_value.asInstanceOf[BitVecNum].getInt
+                        } catch {
+                          case _ =>
+                            val v = raw_value.toString.toLong - 4294967296L
+                            if (debugMode()) print("\nWARNING: cannot evaluate " + varName + " value " + raw_value + " substituting with " + v)
+                            v                            
+                        }
+
                       (varName, value)
                   })
-                  result.map({ case (n, v) => println(n + " = " + v)})
-                case None => println("UNSAT")
+                  if (debugMode()) println()
+                  if (debugMode()) result.map({ case (n, v) => println(n + " = " + v)})
+                case None => if (debugMode()) println("UNSAT")
               }
               solver.solver.reset()
           })
@@ -104,11 +122,9 @@ object AFRepair {
     })
     solver.delete()
 
-    if (repairedTests.distinct.length == testSuiteIds.length) {
-      println("REPAIRED")
-    } else {
-      println("FAILED")
-    }
+    println("Paths explored: " + smtFiles.length)
+    println("Angelic values generated: " + repairedTests.length)
+    println("Test cases repaired: " + repairedTests.distinct.length + "/" + testSuiteIds.length)
 
     af.toList.toMap
   }
