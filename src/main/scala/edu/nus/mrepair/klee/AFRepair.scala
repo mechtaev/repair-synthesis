@@ -53,7 +53,7 @@ object AFRepair {
     testSuiteIds.map({ case id => af += id -> Nil })
     smtFiles.map({
       case file =>
-        if (debugMode()) println("-----------------------\nchecking path " + file)
+        if (debugMode()) println("[synthesis] checking path " + file)
         val formula = scala.io.Source.fromFile(file).mkString
         val afVars = getAvailableSymbols(formula, solver)
         solver.solver.reset()
@@ -68,7 +68,7 @@ object AFRepair {
           testSuiteIds.map({
             case testId =>
 
-              if (debugMode()) print("test " + testId + ": ")
+              if (debugMode()) println("[synthesis] checking test " + testId)
               val (in, out) = getTestData(testUniverseDir, testId)
 
               val inputAssertion = in.map({
@@ -81,40 +81,47 @@ object AFRepair {
                   }
               }).mkString("\n")
 
+              var unconstraintOutputVars: List[String] = Nil;
+
               val outputAssertion = out.map({
                 case (name, value) =>
                   val varName = "af_output_int_" + name
                   if(afVars.contains(varName)) {
                     s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
+                    unconstraintOutputVars = name :: unconstraintOutputVars;
                     ""
                   }
               }).mkString("\n")
 
-              val ending = "\n(check-sat)\n(exit)"
-              val clauses = solver.z3.parseSMTLIB2String(formula + inputAssertion + outputAssertion + getter + ending, Array(), Array(), Array(), Array())
-              solver.solveAndGetModel(Nil, clauses :: Nil) match {
-                case Some((_, model)) =>
-                  repairedTests = testId :: repairedTests
-                  val result = afVars.map({
-                    case varName =>
-                      val auxName = "aux_" + varName
-                      val raw_value = model.eval(solver.z3.mkBVConst(auxName, 32), false)
-                      val value =
-                        try {
-                          raw_value.asInstanceOf[BitVecNum].getInt
-                        } catch {
-                          case _ =>
-                            val v = raw_value.toString.toLong - 4294967296L
-                            if (debugMode()) print("\nWARNING: cannot evaluate " + varName + " value " + raw_value + " substituting with " + v)
-                            v                            
-                        }
-
-                      (varName, value)
-                  })
-                  if (debugMode()) println()
-                  if (debugMode()) result.map({ case (n, v) => println(n + " = " + v)})
-                case None => if (debugMode()) println("UNSAT")
+              if (!unconstraintOutputVars.isEmpty) {
+                if (debugMode()) {
+                  println("[synthesis] unconstraint output variables: " + unconstraintOutputVars.mkString(" "))
+                }
+              } else {
+                val ending = "\n(check-sat)\n(exit)"
+                val clauses = solver.z3.parseSMTLIB2String(formula + inputAssertion + outputAssertion + getter + ending, Array(), Array(), Array(), Array())
+                solver.solveAndGetModel(Nil, clauses :: Nil) match {
+                  case Some((_, model)) =>
+                    repairedTests = testId :: repairedTests
+                    val result = afVars.map({
+                      case varName =>
+                        val auxName = "aux_" + varName
+                        val raw_value = model.eval(solver.z3.mkBVConst(auxName, 32), false)
+                        val value =
+                          try {
+                            raw_value.asInstanceOf[BitVecNum].getInt
+                          } catch {
+                            case _ =>
+                              val v = raw_value.toString.toLong - 4294967296L
+                              if (debugMode()) println("[synthesis] evaluating " + varName + " value " + raw_value + " as " + v)
+                              v
+                          }
+                        (varName, value)
+                    })
+                    if (debugMode()) result.map({ case (n, v) => println("[synthesis] " + n + " = " + v)})
+                  case None => if (debugMode()) println("[synthesis] UNSAT")
+                }
               }
               solver.solver.reset()
           })
