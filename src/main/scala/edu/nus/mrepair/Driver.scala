@@ -67,7 +67,9 @@ object Driver {
 
     // println(Report.toString(result))
 
-    val testUniverseDir :: testSuiteStr :: configFile :: extractedFile :: smtFiles = args.toList
+    Utils.enableLogging = true
+
+    val testUniverseDir :: testSuiteStr :: configFile :: extractedDir :: smtFiles = args.toList
     val testSuiteIds = testSuiteStr.split("\\s+").toList
     val config = Report.parseConfig(new File(configFile))
     val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
@@ -76,8 +78,25 @@ object Driver {
         println("test " + testId)
         println(ap)
     })
-    val patch = AFRepair.generatePatch(config, new File(extractedFile), angelicForest)
-    println(patch)
+    val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
+    patch match {
+      case Right(isSolvingTimeout) => println("FAIL. timeout= " + isSolvingTimeout)
+      case Left(diff) =>
+        /*
+         should print something like:
+         
+         123
+         - x + y
+         + x + 1
+
+         436
+         - a > b
+         + a >= b
+
+         */         
+        //val p = diff.map({ case (buggy, fixed) => buggy.toString + " --> " + fixed.toString })
+        //println(p)
+    }
   }
 
 }

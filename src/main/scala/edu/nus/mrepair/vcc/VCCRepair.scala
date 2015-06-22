@@ -4,7 +4,7 @@ import edu.nus.mrepair._
 import edu.nus.mrepair.Utils._
 import java.io.File
 import edu.nus.vctrans.subsmode
-import edu.nus.mrepair.vcc.translation.{AnnotationFilter, RepairableSubstitutor, SMTParser, TFGenerator}
+import edu.nus.mrepair.vcc.translation.{AnnotationFilter, RepairableSubstitutor, TFGenerator}
 import edu.nus.mrepair.Utils.SimpleLogger._
 import org.smtlib.IExpr
 

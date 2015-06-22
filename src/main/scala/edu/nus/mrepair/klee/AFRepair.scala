@@ -13,6 +13,8 @@ import scala.collection.JavaConverters._
 import edu.nus.mrepair.synthesis.{ProgramFormula, Formula, ComponentFormula}
 import Formula._
 import ProgramFormula._
+import org.smtlib.command.C_assert
+import edu.nus.mrepair.vcc.VCCUtils
 
 
 /**
@@ -20,17 +22,32 @@ import ProgramFormula._
   */
 object AFRepair {
 
-  def generatePatch(synthesisConfig: SynthesisConfig,
-                    extracted: File,
-                    angelicForest: AngelicForest): Map[Int, String] = {
-    ???
-  }
-
   def debugMode(): Boolean = {
     sys.env.get("AF_DEBUG") match {
       case None => false
       case _ => true
     }
+  }
+
+  def generatePatch(synthesisConfig: SynthesisConfig,
+                    extractedDir: String,
+                    angelicForest: AngelicForest): Either[List[(ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
+    val suspiciousIds = (new File(extractedDir)).listFiles.filter(f => """.*\.smt2$""".r.findFirstIn(f.getName).isDefined).map(_.getName.dropRight(".smt2".length).toInt).toList
+    val suspicious = suspiciousIds.map({ case id =>
+      val script = SMTParser.parseFile(new File(extractedDir + "/" + id + ".smt2"))
+      val expr = script.commands().asScala.toList.map({
+        case asrt: C_assert => asrt.expr()
+      }).apply(0)
+      (id, expr)
+    })
+
+    val (rc, components) = edu.nus.mrepair.klee.RCGenerator.generate(angelicForest, suspicious, synthesisConfig)
+
+    
+
+    val (patch, stat) = edu.nus.mrepair.klee.RCGenerator.solve(rc, components, synthesisConfig)
+
+    patch
   }
 
   def getAvailableSymbols(formula: String, solver: MaxSMT with Z3): List[String] = {
@@ -67,7 +84,7 @@ object AFRepair {
       case (id, assignment) =>
         var original: Option[Int] = None
         var angelic: Option[Int] = None
-        val context = assignment.foldLeft(List[(ProgramVariable, Int)]())({
+        val context = assignment.foldLeft(List[(String, Int)]())({
           case (acc, (_, ("original" :: Nil, v))) =>
             original = Some(v)
             acc
@@ -75,7 +92,7 @@ object AFRepair {
             angelic = Some(v)
             acc
           case (acc, (_, ("env" :: name :: Nil, v))) =>
-            (ProgramVariable(name, IntegerType()), v) :: acc
+            (name, v) :: acc
         })
         AngelicValue(context, angelic.get, id)
     })

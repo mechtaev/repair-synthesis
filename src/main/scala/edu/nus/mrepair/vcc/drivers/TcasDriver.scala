@@ -14,7 +14,7 @@ import edu.nus.mrepair.synthesis.EncodingConfig
 import edu.nus.mrepair.VCCBenchmark
 import edu.nus.mrepair.SynthesisAST
 import edu.nus.vctrans.ast.DefineFunAst
-import edu.nus.mrepair.vcc.translation.SMTParser
+import edu.nus.mrepair.SMTParser
 import org.smtlib.command.{C_assert, C_define_fun}
 import org.smtlib.IExpr
 

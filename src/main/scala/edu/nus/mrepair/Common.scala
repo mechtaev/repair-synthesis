@@ -64,7 +64,7 @@ case class BenchmarkExecutionResult(benchmark: String,
 
 object AngelicFix {
 
-  case class AngelicValue(context: List[(ProgramVariable, Int)], value: Int, stmtId: Int)
+  case class AngelicValue(context: List[(String, Int)], value: Int, stmtId: Int)
 
   type AngelicPath = List[AngelicValue]
 

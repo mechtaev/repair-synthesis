@@ -1,4 +1,4 @@
-package edu.nus.mrepair.vcc.translation
+package edu.nus.mrepair
 
 import java.io.{IOException, FileReader, FileWriter, File}
 import java.util.UUID

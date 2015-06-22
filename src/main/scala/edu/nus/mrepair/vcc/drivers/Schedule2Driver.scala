@@ -11,7 +11,7 @@ import edu.nus.mrepair.vcc.VCCRepair
 import edu.nus.mrepair.SuspiciousLocations
 import edu.nus.mrepair.TestData
 import edu.nus.mrepair.SynthesisAST
-import edu.nus.mrepair.vcc.translation.SMTParser
+import edu.nus.mrepair.SMTParser
 import edu.nus.mrepair.SMTlibAST
 import edu.nus.mrepair.Utils
 import org.smtlib.IExpr

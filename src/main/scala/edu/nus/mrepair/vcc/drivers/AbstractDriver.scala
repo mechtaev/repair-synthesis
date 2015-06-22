@@ -16,7 +16,7 @@ import edu.nus.mrepair.VCCBenchmark
 import edu.nus.mrepair.SynthesisAST
 import edu.nus.vctrans.ast.DefineFunAst
 import edu.nus.vctrans.ast.DeclareFunAst
-import edu.nus.mrepair.vcc.translation.SMTParser
+import edu.nus.mrepair.SMTParser
 import org.smtlib.command.{C_assert, C_define_fun, C_declare_fun}
 import org.smtlib.IExpr
 import scala.io.Source
