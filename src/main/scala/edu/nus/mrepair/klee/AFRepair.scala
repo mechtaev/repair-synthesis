@@ -10,17 +10,20 @@ import scala.util.parsing.combinator._
 import com.microsoft.z3._
 import edu.nus.maxsmtplay._
 import scala.collection.JavaConverters._
+import edu.nus.mrepair.synthesis.{ProgramFormula, Formula, ComponentFormula}
+import Formula._
+import ProgramFormula._
+
 
 /**
   * AngelicFix implementation top class
   */
-
 object AFRepair {
 
   def generatePatch(synthesisConfig: SynthesisConfig,
                     extracted: File,
                     angelicForest: AngelicForest): Map[Int, String] = {
-    Map(1 -> "foo")
+    ???
   }
 
   def debugMode(): Boolean = {
@@ -42,37 +45,40 @@ object AFRepair {
   }
 
   /*
-   af_suspicious_int_0 = 3
-   af_suspicious_env_int_x = 1
-   af_input_int_y = 3
-   af_output_int_stdout = 4
-   af_suspicious_env_int_y = 3
-   af_input_int_x = 1
-   af_suspicious_original_int_0 = 4
+   Name format example:
+
+   af!suspicious!int!0 = 3
+   af!suspicious!int!0!env!x = 1
+   af!input!int!y = 3
+   af!output!int!stdout = 4
+   af!suspicious!int!0!env!y = 3
+   af!input!int!x = 1
+   af!suspicious!int!0!original = 4
   */
-
-  //TODO
-  // 1. start everything with af_suspicious_int
-  // 2. then id
-  // 3. then modifier
-  // 4. change separator to !
-
-  //Something like that:
-
-    /*
-     af!suspicious!int!0 = 3
-     af!suspicious!int!0!env!x = 1
-     af!input!int!y = 3
-     af!output!int!stdout = 4
-     af!suspicious!int!0!env!y = 3
-     af!input!int!x = 1
-     af!suspicious!int!0!original = 4
-    */
-
-
   def getAngelicPath(assignment: VariableValues): AngelicPath = {
-    assignment.toList.filter({ case (n, v) => n.startsWith("af!suspicious!int")})
-    Nil
+    val suspiciousPrefix = "af!suspicious!int!"
+    assignment.toList.filter({
+      case (n, v) => n.startsWith(suspiciousPrefix)
+    }).map({
+      case (n, v) =>
+        val id :: rest = n.drop(suspiciousPrefix.length).split("!").toList
+        (id.toInt, (rest, v))
+    }).groupBy(_._1).toList.map({
+      case (id, assignment) =>
+        var original: Option[Int] = None
+        var angelic: Option[Int] = None
+        val context = assignment.foldLeft(List[(ProgramVariable, Int)]())({
+          case (acc, (_, ("original" :: Nil, v))) =>
+            original = Some(v)
+            acc
+          case (acc, (_, ("angelic" :: Nil, v))) =>
+            angelic = Some(v)
+            acc
+          case (acc, (_, ("env" :: name :: Nil, v))) =>
+            (ProgramVariable(name, IntegerType()), v) :: acc
+        })
+        AngelicValue(context, angelic.get, id)
+    })
   }
 
   /**
@@ -122,7 +128,6 @@ object AFRepair {
               val outputAssertion = out.map({
                 case (name, value) =>
                   val varName = "af!output!int!" + name
-                  println(varName + " -> " + value)
                   if(afVars.contains(varName)) {
                     s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {

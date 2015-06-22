@@ -71,6 +71,11 @@ object Driver {
     val testSuiteIds = testSuiteStr.split("\\s+").toList
     val config = Report.parseConfig(new File(configFile))
     val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
+    angelicForest.foreach({
+      case (testId, ap) =>
+        println("test " + testId)
+        println(ap)
+    })
     val patch = AFRepair.generatePatch(config, new File(extractedFile), angelicForest)
     println(patch)
   }
