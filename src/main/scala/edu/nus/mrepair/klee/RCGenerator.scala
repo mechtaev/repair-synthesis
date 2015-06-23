@@ -20,6 +20,16 @@ import edu.nus.mrepair.Utils.SimpleLogger._
 
 object RCGenerator {
 
+  //FIXME: temporary hack
+  def typeOf(name: String): Type = {
+    name match {
+      case "Own_Below_Threat_result" => BooleanType()
+      case "Down_Separation" => IntegerType()
+      case "ALIM_RESULT" => IntegerType()
+      case _ => IntegerType()
+    }
+  }
+
   def generate(angelicForest: AngelicForest,
                suspicious: List[(Int, IExpr)],
                repairConfig: SynthesisConfig): (RepairCondition, List[Component]) = {
@@ -31,8 +41,8 @@ object RCGenerator {
       suspicious.map({
         case (stmtId, expr) =>
           //TODO check type here:
-          val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case _ => Some(IntegerType()) })
-          (ProgramVariable(bindingVar(stmtId), IntegerType()), pfe, None, stmtId, 1)
+          val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
+          (ProgramVariable(bindingVar(stmtId), BooleanType()), pfe, None, stmtId, 1)
       })
 
     val (repairableObjects, extractedComponents) = 
@@ -48,13 +58,22 @@ object RCGenerator {
     //TODO if there are multiple suspicious expressions, context for them can have same variables that can have different values
     val semanticsConstraints = angelicForest.values.zipWithIndex.map({
       case (ap, testId) =>
-        val start: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
-        val formula = ap.flatten.foldLeft(start)({
-          case (acc, AngelicValue(context, value, stmtId)) =>
-            val angelic = (ivar(bindingVar(stmtId)) === value)
-            val clause = context.foldLeft(angelic)({ case (e, (n, v)) => (ivar(n) === v) & e })
-            (clause | acc)
-        })
+        val angelicPaths = ap.flatten
+        val formula = angelicPaths match {
+          case Nil => BooleanValue[ProgramVariable](true)
+          case _ =>
+            val start: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
+            ap.flatten.foldLeft(start)({
+              case (acc, AngelicValue(context, value, stmtId)) =>
+                val angelic = (bvar(bindingVar(stmtId)) === (value > 0))
+                val clause = context.foldLeft(angelic)({ case (e, (n, v)) =>
+                  typeOf(n) match {
+                    case BooleanType() => (bvar(n) === (v > 0)) & e
+                    case IntegerType() => (ivar(n) === v) & e
+                  }})
+                (clause | acc)
+            })
+        }
 
         val synthesisPart = semanticsConstraintsForTestCase(repairableObjects, sharedComponents, testId, repairConfig.synthesisConfig).map(FormulaAST)
 
