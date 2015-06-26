@@ -32,6 +32,7 @@ object AFRepair {
   def generatePatch(synthesisConfig: SynthesisConfig,
                     extractedDir: String,
                     angelicForest: AngelicForest): Either[List[(ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
+    //TODO I need to be more clear from where I take ids: files or environment variable
     val suspiciousIds = (new File(extractedDir)).listFiles.filter(f => """.*\.smt2$""".r.findFirstIn(f.getName).isDefined).map(_.getName.dropRight(".smt2".length).toInt).toList
     val suspicious = suspiciousIds.map({ case id =>
       val script = SMTParser.parseFile(new File(extractedDir + "/" + id + ".smt2"))
@@ -64,27 +65,27 @@ object AFRepair {
   /*
    Name format example:
 
-   af!suspicious!int!0 = 3
-   af!suspicious!int!0!env!x = 1
-   af!input!int!y = 3
-   af!output!int!stdout = 4
-   af!suspicious!int!0!env!y = 3
-   af!input!int!x = 1
-   af!suspicious!int!0!original = 4
+   int!suspicious!0 = 3
+   int!suspicious!0!env!x = 1
+   int!input!y = 3
+   int!output!stdout = 4
+   int!suspicious!0!env!y = 3
+   int!input!x = 1
+   int!suspicious!0!original = 4
   */
-  def getAngelicPath(assignment: VariableValues): AngelicPath = {
-    val suspiciousPrefix = "af!suspicious!int!"
+  def getAngelicPath(assignment: List[VariableValue]): AngelicPath = {
+    val suspiciousPrefix = "suspicious!"
     assignment.toList.filter({
-      case (n, v) => n.startsWith(suspiciousPrefix)
+      case IntVal(n, v) => n.startsWith(suspiciousPrefix)
     }).map({
-      case (n, v) =>
+      case IntVal(n, v) =>
         val id :: rest = n.drop(suspiciousPrefix.length).split("!").toList
         (id.toInt, (rest, v))
     }).groupBy(_._1).toList.map({
       case (id, assignment) =>
         var original: Option[Int] = None
         var angelic: Option[Int] = None
-        val context = assignment.foldLeft(List[(String, Int)]())({
+        val context = assignment.foldLeft(List[VariableValue]())({
           case (acc, (_, ("original" :: Nil, v))) =>
             original = Some(v)
             acc
@@ -92,9 +93,9 @@ object AFRepair {
             angelic = Some(v)
             acc
           case (acc, (_, ("env" :: name :: Nil, v))) =>
-            (name, v) :: acc
+            IntVal(name, v) :: acc
         })
-        AngelicValue(context, angelic.get, id)
+        AngelicValue(context, IntVal("suspicious" + id, angelic.get), id)
     })
   }
 
@@ -131,8 +132,8 @@ object AFRepair {
               val (in, out) = getTestData(testUniverseDir, testId)
 
               val inputAssertion = in.map({
-                case (name, value) =>
-                  val varName = "af!input!int!" + name
+                case IntVal(name, value) =>
+                  val varName = "int!input!" + name
                   if(afVars.contains(varName)) {
                     s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
@@ -143,8 +144,8 @@ object AFRepair {
               var unconstraintOutputVars: List[String] = Nil;
 
               val outputAssertion = out.map({
-                case (name, value) =>
-                  val varName = "af!output!int!" + name
+                case IntVal(name, value) =>
+                  val varName = "int!output!" + name
                   if(afVars.contains(varName)) {
                     s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
@@ -179,7 +180,8 @@ object AFRepair {
                         (varName, value)
                     })
                     if (debugMode()) result.foreach({ case (n, v) => println("[synthesis] " + n + " = " + v)})
-                    val ap = getAngelicPath(result.map({ case (n, v) => (n, v.toInt) }).toMap)
+                    //TODO temporary
+                    val ap = getAngelicPath(result.map({ case (n, v) => IntVal(n.drop("int!".length), v.toInt) }))
                     af(testId) = ap :: af(testId)
                   case None => if (debugMode()) println("[synthesis] UNSAT")
                 }
@@ -198,7 +200,7 @@ object AFRepair {
   }
 
 
-  def getTestData(testUniverseDir: String, testId: String): (VariableValues, VariableValues) = {
+  def getTestData(testUniverseDir: String, testId: String): (List[VariableValue], List[VariableValue]) = {
     val inputsFile = testUniverseDir + File.separator + testId + ".in"
     val outputsFile = testUniverseDir + File.separator + testId + ".out"
     val inputsSource = scala.io.Source.fromFile(inputsFile)
@@ -212,14 +214,20 @@ object AFRepair {
     (in, out)
   }
 
-  type VariableValues = Map[String, Int]
 
   object TestMappingParser extends JavaTokenParsers {
-    def apply(input: String): VariableValues = parseAll(inputs, input).get.toMap
+    def apply(input: String): List[VariableValue] = parseAll(inputs, input).get
     def inputs = rep(input)
-    def input = inputName ~ "=" ~ inputValue ^^ { case n ~ "=" ~ v => (n, v) }
-    def inputName: Parser[String] = ident
-    def inputValue: Parser[Int] = wholeNumber ^^ { case si => Integer.parseInt(si) }
+    def input =
+      ( "int " ~ ident ~ "=" ~ inputIntValue ^^ { case "int "  ~ n ~ "=" ~ v => IntVal(n, v) }
+      | "bool " ~ ident ~ "=" ~ inputBoolValue ^^ { case "bool "  ~ n ~ "=" ~ v => BoolVal(n, v) }
+      | "char " ~ ident ~ "=" ~ inputCharValue ^^ { case "char " ~ n ~ "=" ~ v => CharVal(n, v) })
+    def inputIntValue: Parser[Int] =
+      wholeNumber ^^ { case si => Integer.parseInt(si) }
+    def inputBoolValue: Parser[Boolean] =
+      ( "true" ^^ { case si => true } | "false" ^^ { case si => false } )
+    def inputCharValue: Parser[Char] =
+      "'" ~ ident ~ "'" ^^ { case "'" ~ c ~ "'" => c.charAt(0) }
   }
 
 }

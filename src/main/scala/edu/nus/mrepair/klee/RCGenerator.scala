@@ -65,8 +65,11 @@ object RCGenerator {
             val start: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
             ap.flatten.foldLeft(start)({
               case (acc, AngelicValue(context, value, stmtId)) =>
-                val angelic = (bvar(bindingVar(stmtId)) === (value > 0))
-                val clause = context.foldLeft(angelic)({ case (e, (n, v)) =>
+                val angelic = value match {
+                  case BoolVal(id, v) => (bvar(id) === v)
+                  case IntVal(id, v) => (ivar(id) === v)
+                }
+                val clause = context.foldLeft(angelic)({ case (e, IntVal(n, v)) =>
                   typeOf(n) match {
                     case BooleanType() => (bvar(n) === (v > 0)) & e
                     case IntegerType() => (ivar(n) === v) & e

@@ -64,7 +64,12 @@ case class BenchmarkExecutionResult(benchmark: String,
 
 object AngelicFix {
 
-  case class AngelicValue(context: List[(String, Int)], value: Int, stmtId: Int)
+  sealed trait VariableValue
+  case class IntVal(name: String, value: Int) extends VariableValue
+  case class BoolVal(name: String, value: Boolean) extends VariableValue
+  case class CharVal(name: String, value: Char) extends VariableValue
+
+  case class AngelicValue(context: List[VariableValue], value: VariableValue, stmtId: Int)
 
   type AngelicPath = List[AngelicValue]
 
