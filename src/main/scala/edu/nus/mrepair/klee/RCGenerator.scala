@@ -20,6 +20,13 @@ import edu.nus.mrepair.Utils.SimpleLogger._
 
 object RCGenerator {
 
+  def debugMode(): Boolean = {
+    sys.env.get("AF_DEBUG") match {
+      case None => false
+      case _ => true
+    }
+  }
+
   //TODO this is a hack that is implemented inconsistently
   def bindingVar(stmtId: Int): String = "suspicious" + stmtId.toString
 
@@ -84,13 +91,13 @@ object RCGenerator {
           if (typeConstraints.contains(s)) BooleanType()
           else IntegerType()
         }
-        (stmtId, fixedExpr, typeOf(_), topIsBoolean)
+        (stmtId, fixedExpr, typeOf(_), topIsBoolean || expectedTypeIsBool)
     })
 
     val repairableBindings =
       suspiciousWithTypeinfo.map({
         case (stmtId, expr, typeOf, topIsBool) =>
-           //TODO support instances
+          //TODO support instances
           val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
           (ProgramVariable(bindingVar(stmtId), if (topIsBool) BooleanType() else IntegerType()), pfe, None, stmtId, 1)
       })
@@ -104,6 +111,11 @@ object RCGenerator {
                repairConfig: SynthesisConfig): (RepairCondition, List[(String, ProgramFormulaExpression)], List[Component]) = {
 
     val (angelicForest, repairableBindings) = correctTypes(angelicForestRaw, suspicious)
+
+    if (debugMode()) {
+      println("[synthesis] Angelic forest with inferred types:")
+      angelicForest.foreach({ case (t, aps) => println("[synthesis] test " + t + ": " + aps) })
+    }
 
     val (repairableObjects, extractedComponents) = 
       extractRepairableObjects(repairableBindings, repairConfig.synthesisConfig, repairConfig.componentLevel)
@@ -131,12 +143,12 @@ object RCGenerator {
             ap.flatten.foldLeft(start)({
               case (acc, AngelicValue(context, value, stmtId)) =>
                 val angelic = value match {
-                  case BoolVal(id, v) => (bvar(id) === v)
+                  case BoolVal(id, v) => (bvar(id) <=> v)
                   case IntVal(id, v) => (ivar(id) === v)
                 }
                 val clause = context.foldLeft(angelic)({
                   case (e, IntVal(n, v)) => (ivar(n) === v) & e
-                  case (e, BoolVal(n, v)) => (bvar(n) === v) & e
+                  case (e, BoolVal(n, v)) => (bvar(n) <=> v) & e
                   })
                 (clause | acc)
             })

@@ -238,7 +238,9 @@ object VCCUtils {
     }
 
     override def visit(e: IExpr.ISymbol): Boolean = {
-      if (justNowWasBooleanOperation) booleans += e.value
+      if (justNowWasBooleanOperation) {
+        booleans += e.value
+      }
       justNowWasBooleanOperation
     }
 
@@ -367,7 +369,7 @@ object VCCUtils {
 
   def castIntToBool(expr: IExpr): IExpr = {
     val not: IExpr.IQualifiedIdentifier = new SMTExpr.Symbol("not")
-    val eq: IExpr.IQualifiedIdentifier = new SMTExpr.Symbol("not")
+    val eq: IExpr.IQualifiedIdentifier = new SMTExpr.Symbol("=")
     val zero = new SMTExpr.Numeral(0)
     val eqSubExpr = new java.util.ArrayList[IExpr]()
     eqSubExpr.add(expr)

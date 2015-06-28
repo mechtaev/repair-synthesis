@@ -113,7 +113,7 @@ object Formula {
     override def toString: String = "!"
   }
   case class Equal() extends BinaryOperator {
-    override def toString: String = "="
+    override def toString: String = "=="
   }
   case class Less() extends BinaryOperator {
     override def toString: String = "<"
