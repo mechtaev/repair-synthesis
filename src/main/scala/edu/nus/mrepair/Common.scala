@@ -69,6 +69,23 @@ object AngelicFix {
   case class BoolVal(name: String, value: Boolean) extends VariableValue
   case class CharVal(name: String, value: Char) extends VariableValue
 
+  def renameVal(v: VariableValue, newname: String): VariableValue = {
+    v match {
+      case IntVal(n, v)  => IntVal(newname, v)
+      case BoolVal(n, v) => BoolVal(newname, v)
+      case CharVal(n, v) => CharVal(newname, v)
+    }
+  }
+
+  def getName(v: VariableValue): String = {
+    v match {
+      case IntVal(n, v)  => n
+      case BoolVal(n, v) => n
+      case CharVal(n, v) => n
+    }
+  }
+
+
   case class AngelicValue(context: List[VariableValue], value: VariableValue, stmtId: Int)
 
   type AngelicPath = List[AngelicValue]

@@ -42,7 +42,7 @@ object RCGenerator {
         case (stmtId, expr) =>
           //TODO check type here:
           val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
-          (ProgramVariable(bindingVar(stmtId), BooleanType()), pfe, None, stmtId, 1)
+          (ProgramVariable(bindingVar(stmtId), IntegerType()), pfe, None, stmtId, 1)
       })
 
     val (repairableObjects, extractedComponents) = 

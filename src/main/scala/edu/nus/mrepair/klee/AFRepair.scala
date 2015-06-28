@@ -76,26 +76,34 @@ object AFRepair {
   def getAngelicPath(assignment: List[VariableValue]): AngelicPath = {
     val suspiciousPrefix = "suspicious!"
     assignment.toList.filter({
-      case IntVal(n, v) => n.startsWith(suspiciousPrefix)
+      case IntVal(n, v)  => n.startsWith(suspiciousPrefix)
+      case BoolVal(n, v) => n.startsWith(suspiciousPrefix)
+      case CharVal(n, v) => n.startsWith(suspiciousPrefix)
     }).map({
       case IntVal(n, v) =>
         val id :: rest = n.drop(suspiciousPrefix.length).split("!").toList
-        (id.toInt, (rest, v))
+        (id.toInt, (rest, IntVal(n, v)))
+      case BoolVal(n, v) =>
+        val id :: rest = n.drop(suspiciousPrefix.length).split("!").toList
+        (id.toInt, (rest, BoolVal(n, v)))
+      case CharVal(n, v) =>
+        val id :: rest = n.drop(suspiciousPrefix.length).split("!").toList
+        (id.toInt, (rest, CharVal(n, v)))
     }).groupBy(_._1).toList.map({
       case (id, assignment) =>
-        var original: Option[Int] = None
-        var angelic: Option[Int] = None
+        var original: Option[VariableValue] = None
+        var angelic: Option[VariableValue] = None
         val context = assignment.foldLeft(List[VariableValue]())({
           case (acc, (_, ("original" :: Nil, v))) =>
             original = Some(v)
             acc
           case (acc, (_, ("angelic" :: Nil, v))) =>
-            angelic = Some(v)
+            angelic = Some(renameVal(v, "suspicious" + id))
             acc
           case (acc, (_, ("env" :: name :: Nil, v))) =>
-            IntVal(name, v) :: acc
+            renameVal(v, name) :: acc
         })
-        AngelicValue(context, IntVal("suspicious" + id, angelic.get), id)
+        AngelicValue(context, angelic.get, id)
     })
   }
 
@@ -131,6 +139,7 @@ object AFRepair {
               if (debugMode()) println("[synthesis] checking test " + testId)
               val (in, out) = getTestData(testUniverseDir, testId)
 
+              //TODO: refactor this long strings:
               val inputAssertion = in.map({
                 case IntVal(name, value) =>
                   val varName = "int!input!" + name
@@ -139,6 +148,18 @@ object AFRepair {
                   } else {
                     ""
                   }
+                case BoolVal(name, value) =>
+                  val varName = "bool!input!" + name
+                  if(afVars.contains(varName)) {
+                    if (value) {
+                      s"(assert (not (= (_ bv0 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32))))))))"
+                    } else {
+                      s"(assert (= (_ bv0 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                    }
+                  } else {
+                    ""
+                  }
+                  //TODO CharVal ...
               }).mkString("\n")
 
               var unconstraintOutputVars: List[String] = Nil;
@@ -152,6 +173,19 @@ object AFRepair {
                     unconstraintOutputVars = name :: unconstraintOutputVars;
                     ""
                   }
+                case BoolVal(name, value) =>
+                  val varName = "bool!output!" + name
+                  if(afVars.contains(varName)) {
+                    if (value) {
+                      s"(assert (not (= (_ bv0 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32))))))))"
+                    } else {
+                      s"(assert (= (_ bv0 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
+                    }
+                  } else {
+                    unconstraintOutputVars = name :: unconstraintOutputVars;
+                    ""
+                  }
+
               }).mkString("\n")
 
               if (!unconstraintOutputVars.isEmpty) {
@@ -181,7 +215,17 @@ object AFRepair {
                     })
                     if (debugMode()) result.foreach({ case (n, v) => println("[synthesis] " + n + " = " + v)})
                     //TODO temporary
-                    val ap = getAngelicPath(result.map({ case (n, v) => IntVal(n.drop("int!".length), v.toInt) }))
+                    val ap = getAngelicPath(result.map({
+                      case (n, v) =>
+                        if (n.startsWith("int!")) {
+                          IntVal(n.drop("int!".length), v.toInt)
+                        } else if (n.startsWith("bool!")) {
+                          BoolVal(n.drop("bool!".length), v != 0L)
+                        } else {
+                          println("[synthesis] unsupported type of variable" + n)
+                          sys.exit(1)
+                        }
+                    }))
                     af(testId) = ap :: af(testId)
                   case None => if (debugMode()) println("[synthesis] UNSAT")
                 }
