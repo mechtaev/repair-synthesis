@@ -166,9 +166,95 @@ object VCCUtils {
   
   }
 
+  /*
+   * Find all variables that should be of the boolean type. Get expected outout type. Return actual output type.
+   */
+  class RepairableBooleanInference(topType: Boolean) extends DefaultVisitor[Boolean] {
+
+    val booleans = scala.collection.mutable.SortedSet[String]()
+    var justNowWasBooleanOperation = topType
+
+    def getConstraints(): Set[String] = {
+      booleans.toSet
+    }
+
+    //TODO: I should refactor this (too many repetitions)
+    def binOpByString(op: String): BinaryOperator = {
+      op match {
+        case "or"  => Or()
+        case "and" => And()
+        case "="   => Equal()
+        case "<"   => Less()
+        case "<="  => LessOrEqual()
+        case ">"   => Greater()
+        case ">="  => GreaterOrEqual()
+        case "+"   => Add()
+        case "-"   => Sub()
+        case "*"   => Mult()
+        case "/"   => Div()
+        case "=>"  => Impl()
+        case "iff" => Iff()
+      }
+    }
+
+    def unOpByString(op: String): UnaryOperator = {
+      op match {
+        case "not" => Not()
+        case "-"   => Neg()
+      }
+    }
+
+    def setFlagByOp(op: Operator): Unit = {
+      Types.opArgsType(op) match {
+        case BooleanType() =>
+          justNowWasBooleanOperation = true
+        case _ =>
+          justNowWasBooleanOperation = false
+      }
+    }
+
+
+    override def visit(e: IExpr.IFcnExpr): Boolean = {
+      val op = e.head.headSymbol.value
+      if(builtinSymbols.contains(op)) {
+        e.args.size() match {
+          case 1 =>
+            setFlagByOp(unOpByString(op))
+            e.args.get(0).accept(this)
+            Types.opOutputType(unOpByString(op)) == BooleanType()
+          case 2 =>
+            setFlagByOp(binOpByString(op))
+            e.args.get(0).accept(this)
+            setFlagByOp(binOpByString(op))
+            e.args.get(1).accept(this)
+            Types.opOutputType(binOpByString(op)) == BooleanType()
+          case 3 =>
+            ???
+        }
+      } else {
+        if (Utils.verbose) println("[warn] using uninterpreted function: " + op)
+        ???
+      }
+    }
+
+    override def visit(e: IExpr.ISymbol): Boolean = {
+      if (justNowWasBooleanOperation) booleans += e.value
+      justNowWasBooleanOperation
+    }
+
+    override def visit(e: IExpr.INumeral): Boolean = {
+      false
+    }
+
+    //TODO here should be something about booleans:
+    // override def visit(e: ): ProgramFormulaExpression = {
+    //   BooleanValue(???)
+    // }
+  
+  }
 
   /**
-    * Check whether repairable and translate to our AST
+    * TODO: what is it for?
     */
   class RepairableAnalyzer(typeOf: String => Option[Type]) extends DefaultVisitor[(Int, Int)] {
 
@@ -271,6 +357,26 @@ object VCCUtils {
         if (Utils.verbose) println(expr)
         None
     }
+  }
+
+  def getTypeConstraints(expr: IExpr, expectedTopTypeIsBool: Boolean): (Set[String], Boolean) = {
+    val visitor = new RepairableBooleanInference(expectedTopTypeIsBool)
+    val topType = expr.accept(visitor)
+    (visitor.getConstraints(), topType)
+  }
+
+  def castIntToBool(expr: IExpr): IExpr = {
+    val not: IExpr.IQualifiedIdentifier = new SMTExpr.Symbol("not")
+    val eq: IExpr.IQualifiedIdentifier = new SMTExpr.Symbol("not")
+    val zero = new SMTExpr.Numeral(0)
+    val eqSubExpr = new java.util.ArrayList[IExpr]()
+    eqSubExpr.add(expr)
+    eqSubExpr.add(zero)
+    val eqExpr = new SMTExpr.FcnExpr(eq, eqSubExpr)
+    val notSubExpr = new java.util.ArrayList[IExpr]()
+    notSubExpr.add(eqExpr)
+    val notExpr = new SMTExpr.FcnExpr(not, notSubExpr)
+    notExpr
   }
 
   def isInterestingExpression(expr: IExpr, typeOf: String => Option[Type], config: SynthesisConfig): Boolean = {

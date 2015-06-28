@@ -20,33 +20,98 @@ import edu.nus.mrepair.Utils.SimpleLogger._
 
 object RCGenerator {
 
-  //FIXME: temporary hack
-  def typeOf(name: String): Type = {
-    name match {
-      case "Own_Below_Threat_result" => BooleanType()
-      case "Down_Separation" => IntegerType()
-      case "ALIM_RESULT" => IntegerType()
-      case _ => IntegerType()
+  //TODO this is a hack that is implemented inconsistently
+  def bindingVar(stmtId: Int): String = "suspicious" + stmtId.toString
+
+  //TODO if a variable is used as both integer and boolean, I need wrap it by component (x != 0)
+  def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)]): (AngelicForest, RepairableBindings) = {
+    var af = afRaw
+
+    // check what is the angelic value type for particular statement
+    def expectedTopTypeIsBool(stmtId: Int): Boolean = {
+      val isBooleanList = af.map({
+        case (_, ap) =>
+          ap.map({
+            case vals =>
+              vals.map({
+                case AngelicValue(_, IntVal(_, _), id) if id == stmtId => false
+                case AngelicValue(_, BoolVal(_, _), id) if id == stmtId => true
+              })
+          }).flatten
+      }).flatten
+
+      val disj = isBooleanList.foldLeft(false)(_ || _)
+      val conj = isBooleanList.foldLeft(true)(_ && _)
+
+      if (disj && !conj) {
+        println("[synthesis] WARNING: inconsistent angelic values types for stmt " + stmtId)
+      }
+
+      disj
     }
+
+    def fixAF(constraints: Set[String], topTypeIsBool: Boolean, stmtId: Int): Unit = {
+      def fixContext(vals: List[VariableValue]): List[VariableValue] = {
+        vals.map({
+          case IntVal(name, value) =>
+            if (constraints.contains(name)) BoolVal(name, value != 0) else IntVal(name, value)
+          case other => other
+        })
+      }
+
+      af = af.map({
+        case (something, ap) =>
+          (something, ap.map({
+            case vals =>
+              vals.map({
+                case AngelicValue(ctx, IntVal(name, value), id) if id == stmtId =>
+                  AngelicValue(fixContext(ctx), if (topTypeIsBool) BoolVal(name, value != 0) else IntVal(name, value), id)
+                case AngelicValue(ctx, BoolVal(name, value), id) if id == stmtId =>
+                  AngelicValue(fixContext(ctx), BoolVal(name, value), id)
+                case other => other
+              })
+          }))
+      })
+    }
+
+    val suspiciousWithTypeinfo = suspicious.map({
+      case (stmtId, expr) =>
+        val expectedTypeIsBool = expectedTopTypeIsBool(stmtId)
+        val (typeConstraints, topIsBoolean) = VCCUtils.getTypeConstraints(expr, expectedTypeIsBool)
+        val fixedExpr = if (expectedTypeIsBool && !topIsBoolean) VCCUtils.castIntToBool(expr) else expr
+        fixAF(typeConstraints, topIsBoolean, stmtId)
+        def typeOf(s: String): Type = {
+          if (typeConstraints.contains(s)) BooleanType()
+          else IntegerType()
+        }
+        (stmtId, fixedExpr, typeOf(_), topIsBoolean)
+    })
+
+    val repairableBindings =
+      suspiciousWithTypeinfo.map({
+        case (stmtId, expr, typeOf, topIsBool) =>
+           //TODO support instances
+          val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
+          (ProgramVariable(bindingVar(stmtId), if (topIsBool) BooleanType() else IntegerType()), pfe, None, stmtId, 1)
+      })
+
+    (af, repairableBindings)
   }
 
-  def generate(angelicForest: AngelicForest,
+
+  def generate(angelicForestRaw: AngelicForest,
                suspicious: List[(Int, IExpr)],
-               repairConfig: SynthesisConfig): (RepairCondition, List[Component]) = {
+               repairConfig: SynthesisConfig): (RepairCondition, List[(String, ProgramFormulaExpression)], List[Component]) = {
 
-    def bindingVar(stmtId: Int): String = "suspicious" + stmtId.toString
-
-    //TODO support instances
-    val repairableBindings =
-      suspicious.map({
-        case (stmtId, expr) =>
-          //TODO check type here:
-          val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
-          (ProgramVariable(bindingVar(stmtId), IntegerType()), pfe, None, stmtId, 1)
-      })
+    val (angelicForest, repairableBindings) = correctTypes(angelicForestRaw, suspicious)
 
     val (repairableObjects, extractedComponents) = 
       extractRepairableObjects(repairableBindings, repairConfig.synthesisConfig, repairConfig.componentLevel)
+
+    //FIXME: when I support instances, it should be done using repairable objects
+    val oldExprs = repairableBindings.map({
+      case (ProgramVariable(name, _), pfe, _, _, _) => (name, pfe)
+    })
 
     //should select components somehow (existing + additional + shared)
     val sharedComponents: List[Component] = Nil
@@ -69,11 +134,10 @@ object RCGenerator {
                   case BoolVal(id, v) => (bvar(id) === v)
                   case IntVal(id, v) => (ivar(id) === v)
                 }
-                val clause = context.foldLeft(angelic)({ case (e, IntVal(n, v)) =>
-                  typeOf(n) match {
-                    case BooleanType() => (bvar(n) === (v > 0)) & e
-                    case IntegerType() => (ivar(n) === v) & e
-                  }})
+                val clause = context.foldLeft(angelic)({
+                  case (e, IntVal(n, v)) => (ivar(n) === v) & e
+                  case (e, BoolVal(n, v)) => (bvar(n) === v) & e
+                  })
                 (clause | acc)
             })
         }
@@ -86,13 +150,14 @@ object RCGenerator {
 
     val components = extractedComponents ++ sharedComponents
 
-    (RepairCondition(hardStructure ++ semanticsConstraints, softStructure), components)
+    (RepairCondition(hardStructure ++ semanticsConstraints, softStructure), oldExprs, components)
   }
 
 
   def solve(rc: RepairCondition,
             components: List[Component],
-            repairConfig: SynthesisConfig): (Either[List[(ProgramFormulaExpression, ProgramFormulaExpression)], Boolean], SolverStat) = {
+            oldExpressions: List[(String, ProgramFormulaExpression)],
+            repairConfig: SynthesisConfig): (Either[List[(Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean], SolverStat) = {
 
     val RepairCondition(hardClauses, softClauses) = rc
 
@@ -104,9 +169,12 @@ object RCGenerator {
         (Right(isTimeout), MaxSMTPlay.lastStat)
       case Left((numRemovedConstr, model)) =>
         val newAssignments = ComponentDecoder.decode(model)
+        val old = oldExpressions.toMap
+        val changes = newAssignments.map({
+          case (v, expr) => (v.name.drop("suspicious".length).toInt, old(v.name), expr)
+        })
         
-        println(newAssignments)
-        (Left(List[(ProgramFormulaExpression, ProgramFormulaExpression)]()), MaxSMTPlay.lastStat)
+        (Left(changes), MaxSMTPlay.lastStat)
     }
 
   }

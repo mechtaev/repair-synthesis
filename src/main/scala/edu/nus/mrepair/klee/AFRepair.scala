@@ -29,24 +29,24 @@ object AFRepair {
     }
   }
 
+
   def generatePatch(synthesisConfig: SynthesisConfig,
                     extractedDir: String,
-                    angelicForest: AngelicForest): Either[List[(ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
+                    angelicForest: AngelicForest): Either[List[(Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
     //TODO I need to be more clear from where I take ids: files or environment variable
     val suspiciousIds = (new File(extractedDir)).listFiles.filter(f => """.*\.smt2$""".r.findFirstIn(f.getName).isDefined).map(_.getName.dropRight(".smt2".length).toInt).toList
-    val suspicious = suspiciousIds.map({ case id =>
-      val script = SMTParser.parseFile(new File(extractedDir + "/" + id + ".smt2"))
-      val expr = script.commands().asScala.toList.map({
-        case asrt: C_assert => asrt.expr()
-      }).apply(0)
-      (id, expr)
+    val suspicious = suspiciousIds.map({
+      case id =>
+        val script = SMTParser.parseFile(new File(extractedDir + "/" + id + ".smt2"))
+        val expr = script.commands().asScala.toList.map({
+          case asrt: C_assert => asrt.expr()
+        }).apply(0)
+        (id, expr)
     })
 
-    val (rc, components) = edu.nus.mrepair.klee.RCGenerator.generate(angelicForest, suspicious, synthesisConfig)
+    val (rc, oldExpr, components) = edu.nus.mrepair.klee.RCGenerator.generate(angelicForest, suspicious, synthesisConfig)
 
-    
-
-    val (patch, stat) = edu.nus.mrepair.klee.RCGenerator.solve(rc, components, synthesisConfig)
+    val (patch, stat) = edu.nus.mrepair.klee.RCGenerator.solve(rc, components, oldExpr, synthesisConfig)
 
     patch
   }
@@ -123,7 +123,7 @@ object AFRepair {
       case file =>
         if (debugMode()) println("[synthesis] checking path " + file)
         val formula = scala.io.Source.fromFile(file).mkString
-        val afVars = getAvailableSymbols(formula, solver)
+        val afVars = getAvailableSymbols(formula, solver).filter({case s => s.startsWith("int!") || s.startsWith("bool!") || s.startsWith("char!")})
         solver.solver.reset()
 
         if (! afVars.isEmpty) {
@@ -222,7 +222,7 @@ object AFRepair {
                         } else if (n.startsWith("bool!")) {
                           BoolVal(n.drop("bool!".length), v != 0L)
                         } else {
-                          println("[synthesis] unsupported type of variable" + n)
+                          println("[synthesis] unsupported type of variable " + n)
                           sys.exit(1)
                         }
                     }))
@@ -236,9 +236,9 @@ object AFRepair {
     })
     solver.delete()
 
-    println("Paths explored: " + smtFiles.length)
-    println("Angelic values generated: " + repairedTests.length)
-    println("Test cases repaired: " + repairedTests.distinct.length + "/" + testSuiteIds.length)
+    println("[synthesis] Paths explored: " + smtFiles.length)
+    println("[synthesis] Angelic values generated: " + repairedTests.length)
+    println("[synthesis] Test cases covered: " + repairedTests.distinct.length + "/" + testSuiteIds.length)
 
     af.toList.toMap
   }
@@ -263,15 +263,10 @@ object AFRepair {
     def apply(input: String): List[VariableValue] = parseAll(inputs, input).get
     def inputs = rep(input)
     def input =
-      ( "int " ~ ident ~ "=" ~ inputIntValue ^^ { case "int "  ~ n ~ "=" ~ v => IntVal(n, v) }
-      | "bool " ~ ident ~ "=" ~ inputBoolValue ^^ { case "bool "  ~ n ~ "=" ~ v => BoolVal(n, v) }
-      | "char " ~ ident ~ "=" ~ inputCharValue ^^ { case "char " ~ n ~ "=" ~ v => CharVal(n, v) })
-    def inputIntValue: Parser[Int] =
-      wholeNumber ^^ { case si => Integer.parseInt(si) }
-    def inputBoolValue: Parser[Boolean] =
-      ( "true" ^^ { case si => true } | "false" ^^ { case si => false } )
-    def inputCharValue: Parser[Char] =
-      "'" ~ ident ~ "'" ^^ { case "'" ~ c ~ "'" => c.charAt(0) }
+      ( ident ~ "=" ~ "'" ~ ident ~ "'" ^^ { case n ~ "=" ~ "'" ~ c ~ "'" => CharVal(n, c.charAt(0)) }
+      | ident ~ "=true" ^^ { case n ~ "=true" => BoolVal(n, true) }
+      | ident ~ "=false" ^^ { case n ~ "=false" => BoolVal(n, false) }
+      | ident ~ "=" ~ wholeNumber ^^ { case n ~ "=" ~ si => IntVal(n, Integer.parseInt(si)) })
   }
 
 }

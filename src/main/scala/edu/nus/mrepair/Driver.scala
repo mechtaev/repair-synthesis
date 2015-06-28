@@ -67,35 +67,25 @@ object Driver {
 
     // println(Report.toString(result))
 
+    //TODO it is a hack. actually it should be fixed in maxsmt-playgroud
+    val dir = new File("log/")
+    if(!dir.exists()) dir.mkdirs()
+
+
     Utils.enableLogging = true
 
     val testUniverseDir :: testSuiteStr :: configFile :: extractedDir :: smtFiles = args.toList
     val testSuiteIds = testSuiteStr.split("\\s+").toList
     val config = Report.parseConfig(new File(configFile))
     val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
-    angelicForest.foreach({
-      case (testId, ap) =>
-        println("test " + testId)
-        println(ap)
-    })
     val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
     patch match {
-      case Right(isSolvingTimeout) => println("FAIL. timeout= " + isSolvingTimeout)
+      case Right(isSolvingTimeout) => println("FAIL. isTimeout = " + isSolvingTimeout)
       case Left(diff) =>
-        /*
-         should print something like:
-         
-         123
-         - x + y
-         + x + 1
-
-         436
-         - a > b
-         + a >= b
-
-         */         
-        //val p = diff.map({ case (buggy, fixed) => buggy.toString + " --> " + fixed.toString })
-        //println(p)
+        diff.foreach({
+          case (id, oldE, newE) =>
+            println(id + "\n- " + oldE + "\n+ " + newE)
+        })
     }
   }
 
