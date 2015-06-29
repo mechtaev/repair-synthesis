@@ -159,7 +159,14 @@ object AFRepair {
                   } else {
                     ""
                   }
-                  //TODO CharVal ...
+                case CharVal(name, value) =>
+                  val varName = "char!input!" + name
+                  val valAsInt = value.asInstanceOf[Int] // basically, ord
+                  if(afVars.contains(varName)) {
+                    s"(assert (= (_ bv$valAsInt 8) (select $varName (_ bv0 32))))"
+                  } else {
+                    ""
+                  }
               }).mkString("\n")
 
               var unconstraintOutputVars: List[String] = Nil;
@@ -185,7 +192,15 @@ object AFRepair {
                     unconstraintOutputVars = name :: unconstraintOutputVars;
                     ""
                   }
-
+                case CharVal(name, value) =>
+                  val varName = "char!output!" + name
+                  val valAsInt = value.asInstanceOf[Int] // basically, ord
+                  if(afVars.contains(varName)) {
+                    s"(assert (= (_ bv$valAsInt 8) (select $varName (_ bv0 32))))"
+                  } else {
+                    unconstraintOutputVars = name :: unconstraintOutputVars;
+                    ""
+                  }
               }).mkString("\n")
 
               if (!unconstraintOutputVars.isEmpty) {
@@ -215,15 +230,14 @@ object AFRepair {
                     })
                     if (debugMode()) result.foreach({ case (n, v) => println("[synthesis] " + n + " = " + v)})
                     //TODO temporary
-                    val ap = getAngelicPath(result.map({
-                      case (n, v) =>
-                        if (n.startsWith("int!")) {
-                          IntVal(n.drop("int!".length), v.toInt)
-                        } else if (n.startsWith("bool!")) {
-                          BoolVal(n.drop("bool!".length), v != 0L)
+                    val ap = getAngelicPath(result.foldLeft(List[VariableValue]())({
+                      case (acc, (n, v)) =>
+                        if (n.startsWith("int!suspicious!")) {
+                          IntVal(n.drop("int!".length), v.toInt) :: acc
+                        } else if (n.startsWith("bool!suspicious!")) {
+                          BoolVal(n.drop("bool!".length), v != 0L) :: acc
                         } else {
-                          println("[synthesis] unsupported type of variable " + n)
-                          sys.exit(1)
+                          acc
                         }
                     }))
                     af(testId) = ap :: af(testId)

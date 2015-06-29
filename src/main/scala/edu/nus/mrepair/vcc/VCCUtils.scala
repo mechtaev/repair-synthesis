@@ -229,7 +229,14 @@ object VCCUtils {
             e.args.get(1).accept(this)
             Types.opOutputType(binOpByString(op)) == BooleanType()
           case 3 =>
-            ???
+            assert(op == "ite")
+            justNowWasBooleanOperation = true
+            e.args.get(0).accept(this)
+            justNowWasBooleanOperation = false
+            e.args.get(1).accept(this)
+            justNowWasBooleanOperation = false
+            e.args.get(2).accept(this)
+            true
         }
       } else {
         if (Utils.verbose) println("[warn] using uninterpreted function: " + op)
