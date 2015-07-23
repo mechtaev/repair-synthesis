@@ -32,7 +32,7 @@ object AFRepair {
 
   def generatePatch(synthesisConfig: SynthesisConfig,
                     extractedDir: String,
-                    angelicForest: AngelicForest): Either[List[(Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
+                    angelicForest: AngelicForest): Either[List[(Int, Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean] = {
     //TODO I need to be more clear from where I take ids: files or environment variable
     val suspiciousIds = (new File(extractedDir)).listFiles.filter(f => """.*\.smt2$""".r.findFirstIn(f.getName).isDefined).map(_.getName.dropRight(".smt2".length).toInt).toList
     val suspicious = suspiciousIds.map({
@@ -90,22 +90,26 @@ object AFRepair {
         val id :: inst :: rest = n.drop(suspiciousPrefix.length).split("!").toList
         (id.toInt, inst.toInt, (rest, CharVal(n, v)))
     }).groupBy(_._1).toList.map({
-      case (id, assignment) =>
-        var original: Option[VariableValue] = None
-        var angelic: Option[VariableValue] = None
-        val context = assignment.foldLeft(List[VariableValue]())({
-          case (acc, (_, inst, ("original" :: Nil, v))) =>
-            //TODO what to do with this instance?
-            original = Some(v)
-            acc
-          case (acc, (_, isnt, ("angelic" :: Nil, v))) =>
-            angelic = Some(renameVal(v, "suspicious" + id))
-            acc
-          case (acc, (_, inst, ("env" :: name :: Nil, v))) =>
-            renameVal(v, name) :: acc
+      case (id, as) =>
+        as.groupBy(_._2).toList.map({
+          case (inst, assignment) =>
+            var original: Option[VariableValue] = None
+            var angelic: Option[VariableValue] = None
+            val context = assignment.foldLeft(List[VariableValue]())({
+              case (acc, (_, _, ("original" :: Nil, v))) =>
+                //TODO what to do with this instance?
+                original = Some(v)
+                acc
+              case (acc, (_, _, ("angelic" :: Nil, v))) =>
+                angelic = Some(renameVal(v, RCGenerator.bindingVar(id, inst)))
+                acc
+              case (acc, (_, _, ("env" :: name :: Nil, v))) =>
+                renameVal(v, name) :: acc
+            })
+            println(angelic.get)
+            AngelicValue(context, angelic.get, id, inst)
         })
-        AngelicValue(context, angelic.get, id)
-    })
+    }).flatten
   }
 
   /**
@@ -170,7 +174,7 @@ object AFRepair {
                   }
               }).mkString("\n")
 
-              var unconstraintOutputVars: List[String] = Nil;
+              var unconstraintOutputVars: List[String] = Nil
 
               val outputAssertion = out.map({
                 case (IntVal(name, value), inst) =>

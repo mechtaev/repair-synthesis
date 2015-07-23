@@ -28,7 +28,7 @@ object RCGenerator {
   }
 
   //TODO this is a hack that is implemented inconsistently
-  def bindingVar(stmtId: Int): String = "suspicious" + stmtId.toString
+  def bindingVar(stmtId: Int, instId: Int): String = "bindingvar" + stmtId.toString + "#" + instId.toString
 
   //TODO if a variable is used as both integer and boolean, I need wrap it by component (x != 0)
   def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)]): (AngelicForest, RepairableBindings) = {
@@ -40,9 +40,11 @@ object RCGenerator {
         case (_, ap) =>
           ap.map({
             case vals =>
-              vals.map({
-                case AngelicValue(_, IntVal(_, _), id) if id == stmtId => false
-                case AngelicValue(_, BoolVal(_, _), id) if id == stmtId => true
+              vals.filter({
+                case AngelicValue(_, _, id, _) => id == stmtId
+              }).map({
+                case AngelicValue(_, IntVal(_, _), id, _) => false
+                case AngelicValue(_, BoolVal(_, _), id, _) => true
               })
           }).flatten
       }).flatten
@@ -71,10 +73,10 @@ object RCGenerator {
           (something, ap.map({
             case vals =>
               vals.map({
-                case AngelicValue(ctx, IntVal(name, value), id) if id == stmtId =>
-                  AngelicValue(fixContext(ctx), if (topTypeIsBool) BoolVal(name, value != 0) else IntVal(name, value), id)
-                case AngelicValue(ctx, BoolVal(name, value), id) if id == stmtId =>
-                  AngelicValue(fixContext(ctx), BoolVal(name, value), id)
+                case AngelicValue(ctx, IntVal(name, value), id, inst) if id == stmtId =>
+                  AngelicValue(fixContext(ctx), if (topTypeIsBool) BoolVal(name, value != 0) else IntVal(name, value), id, inst)
+                case AngelicValue(ctx, BoolVal(name, value), id, inst) if id == stmtId =>
+                  AngelicValue(fixContext(ctx), BoolVal(name, value), id, inst)
                 case other => other
               })
           }))
@@ -99,7 +101,7 @@ object RCGenerator {
         case (stmtId, expr, typeOf, topIsBool) =>
           //TODO support instances
           val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
-          (ProgramVariable(bindingVar(stmtId), if (topIsBool) BooleanType() else IntegerType()), pfe, None, stmtId, 1)
+          (ProgramVariable(bindingVar(stmtId, 0), if (topIsBool) BooleanType() else IntegerType()), pfe, None, stmtId, 1)
       })
 
     (af, repairableBindings)
@@ -141,7 +143,7 @@ object RCGenerator {
           case _ =>
             val start: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
             ap.flatten.foldLeft(start)({
-              case (acc, AngelicValue(context, value, stmtId)) =>
+              case (acc, AngelicValue(context, value, _, _)) =>
                 val angelic = value match {
                   case BoolVal(id, v) => (bvar(id) <=> v)
                   case IntVal(id, v) => (ivar(id) === v)
@@ -169,7 +171,7 @@ object RCGenerator {
   def solve(rc: RepairCondition,
             components: List[Component],
             oldExpressions: List[(String, ProgramFormulaExpression)],
-            repairConfig: SynthesisConfig): (Either[List[(Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean], SolverStat) = {
+            repairConfig: SynthesisConfig): (Either[List[(Int, Int, ProgramFormulaExpression, ProgramFormulaExpression)], Boolean], SolverStat) = {
 
     val RepairCondition(hardClauses, softClauses) = rc
 
@@ -183,7 +185,9 @@ object RCGenerator {
         val newAssignments = ComponentDecoder.decode(model)
         val old = oldExpressions.toMap
         val changes = newAssignments.map({
-          case (v, expr) => (v.name.drop("suspicious".length).toInt, old(v.name), expr)
+          case (v, expr) =>
+            val s :: i :: Nil = v.name.drop("bindingvar".length).split("#").map(_.toInt).toList
+            (s, i, old(v.name), expr)
         })
         
         (Left(changes), MaxSMTPlay.lastStat)

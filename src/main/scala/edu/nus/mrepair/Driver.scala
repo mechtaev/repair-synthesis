@@ -83,8 +83,9 @@ object Driver {
       case Right(isSolvingTimeout) => println("FAIL. isTimeout = " + isSolvingTimeout)
       case Left(diff) =>
         diff.foreach({
-          case (id, oldE, newE) =>
-            println(id + "\n- " + oldE + "\n+ " + newE)
+          case (id, inst, oldE, newE) =>
+            //TODO either sort of drop instances
+            println(id + "#" + inst + "\n- " + oldE + "\n+ " + newE)
         })
     }
   }
