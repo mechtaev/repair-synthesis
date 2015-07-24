@@ -82,10 +82,11 @@ object Driver {
     patch match {
       case Right(isSolvingTimeout) => println("FAIL. isTimeout = " + isSolvingTimeout)
       case Left(diff) =>
-        diff.foreach({
-          case (id, inst, oldE, newE) =>
+        diff.groupBy(_._1).foreach({
+          case (_, (id, inst, oldE, newE) :: _) =>
             //TODO either sort of drop instances
-            println(id + "#" + inst + "\n- " + oldE + "\n+ " + newE)
+            //TODO write it to "patch" file instead
+            println(id + "\n- " + oldE + "\n+ " + newE)
         })
     }
   }

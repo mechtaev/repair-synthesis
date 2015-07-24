@@ -101,12 +101,11 @@ object AFRepair {
                 original = Some(v)
                 acc
               case (acc, (_, _, ("angelic" :: Nil, v))) =>
-                angelic = Some(renameVal(v, RCGenerator.bindingVar(id, inst)))
+                angelic = Some(renameVal(v, "angelic"))
                 acc
               case (acc, (_, _, ("env" :: name :: Nil, v))) =>
                 renameVal(v, name) :: acc
             })
-            println(angelic.get)
             AngelicValue(context, angelic.get, id, inst)
         })
     }).flatten

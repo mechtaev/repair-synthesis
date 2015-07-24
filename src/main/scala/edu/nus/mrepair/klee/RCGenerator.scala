@@ -27,8 +27,21 @@ object RCGenerator {
     }
   }
 
-  //TODO this is a hack that is implemented inconsistently
-  def bindingVar(stmtId: Int, instId: Int): String = "bindingvar" + stmtId.toString + "#" + instId.toString
+  def getAllInstances(af: AngelicForest, stmtId: Int): List[Int] = {
+    af.map({
+      case (_, aps) =>
+        aps.map({
+          case ap =>
+            ap.map({
+              case AngelicValue(_, _, s, i) if s == stmtId => i :: Nil
+              case _ => Nil
+            }).flatten
+        }).flatten
+    }).flatten.toList.distinct
+  }
+
+  // TODO instead of this I need to give proper names to all instances
+  def renameInst(name: String, stmtId: Int, instId: Int): String = name + stmtId.toString + "#" + instId.toString
 
   //TODO if a variable is used as both integer and boolean, I need wrap it by component (x != 0)
   def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)]): (AngelicForest, RepairableBindings) = {
@@ -99,10 +112,14 @@ object RCGenerator {
     val repairableBindings =
       suspiciousWithTypeinfo.map({
         case (stmtId, expr, typeOf, topIsBool) =>
-          //TODO support instances
-          val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
-          (ProgramVariable(bindingVar(stmtId, 0), if (topIsBool) BooleanType() else IntegerType()), pfe, None, stmtId, 1)
-      })
+          val instIds = getAllInstances(af, stmtId)
+          instIds.map({
+            case instId =>
+              val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
+              val pfeRenamed = ProgramFormulaUtils.substitute(pfe, { case ProgramVariable(n, t) => Variable(ProgramVariable(renameInst(n, stmtId, instId), t)) } , { case u => Variable(u) })
+              (ProgramVariable(renameInst("angelic", stmtId, instId), if (topIsBool) BooleanType() else IntegerType()), pfeRenamed, None, stmtId, instId)
+          })
+      }).flatten
 
     (af, repairableBindings)
   }
@@ -136,24 +153,27 @@ object RCGenerator {
 
     //TODO if there are multiple suspicious expressions, context for them can have same variables that can have different values
     val semanticsConstraints = angelicForest.values.zipWithIndex.map({
-      case (ap, testId) =>
-        val angelicPaths = ap.flatten
+      case (aps, testId) =>
+        val angelicPaths = aps.flatten
         val formula = angelicPaths match {
           case Nil => BooleanValue[ProgramVariable](true)
           case _ =>
-            val start: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
-            ap.flatten.foldLeft(start)({
-              case (acc, AngelicValue(context, value, _, _)) =>
-                val angelic = value match {
-                  case BoolVal(id, v) => (bvar(id) <=> v)
-                  case IntVal(id, v) => (ivar(id) === v)
-                }
-                val clause = context.foldLeft(angelic)({
-                  case (e, IntVal(n, v)) => (ivar(n) === v) & e
-                  case (e, BoolVal(n, v)) => (bvar(n) <=> v) & e
-                  })
-                (clause | acc)
-            })
+            val constFalse: ProgramFormulaExpression = BooleanValue[ProgramVariable](false)
+            val constTrue: ProgramFormulaExpression = BooleanValue[ProgramVariable](true)
+            aps.map({
+              case ap =>
+                ap.foldLeft(constTrue)({
+                  case (acc, AngelicValue(context, value, stmdId, instId)) =>
+                    val angelic = value match {
+                      case BoolVal(name, v) => (bvar(renameInst(name, stmdId, instId)) <=> v)
+                      case IntVal(name, v) => (ivar(renameInst(name, stmdId, instId)) === v)
+                    }
+                    val clause = context.foldLeft(angelic)({
+                      case (e, IntVal(name, v)) => (ivar(renameInst(name, stmdId, instId)) === v) & e
+                      case (e, BoolVal(name, v)) => (bvar(renameInst(name, stmdId, instId)) <=> v) & e
+                    })
+                    (clause & acc)
+            })}).foldLeft(constFalse)(_ | _)
         }
 
         val synthesisPart = semanticsConstraintsForTestCase(repairableObjects, sharedComponents, testId, repairConfig.synthesisConfig).map(FormulaAST)
@@ -163,6 +183,7 @@ object RCGenerator {
 
 
     val components = extractedComponents ++ sharedComponents
+    if (Utils.enableLogging) prettyList(components).log("rc-components.log")
 
     (RepairCondition(hardStructure ++ semanticsConstraints, softStructure), oldExprs, components)
   }
@@ -186,7 +207,7 @@ object RCGenerator {
         val old = oldExpressions.toMap
         val changes = newAssignments.map({
           case (v, expr) =>
-            val s :: i :: Nil = v.name.drop("bindingvar".length).split("#").map(_.toInt).toList
+            val s :: i :: Nil = v.name.drop("angelic".length).split("#").map(_.toInt).toList
             (s, i, old(v.name), expr)
         })
         
