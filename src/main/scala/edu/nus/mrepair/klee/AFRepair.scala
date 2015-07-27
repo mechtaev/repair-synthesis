@@ -181,7 +181,7 @@ object AFRepair {
                   if(afVars.contains(varName)) {
                     s"(assert (= ((_ int2bv 32) $value) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                   } else {
-                    unconstraintOutputVars = name :: unconstraintOutputVars;
+                    unconstraintOutputVars = (name + "#" + inst) :: unconstraintOutputVars;
                     ""
                   }
                 case (BoolVal(name, value), inst) =>
@@ -193,7 +193,7 @@ object AFRepair {
                       s"(assert (= (_ bv0 32) (concat (select $varName (_ bv3 32)) (concat (select $varName (_ bv2 32)) (concat (select $varName (_ bv1 32)) (select $varName (_ bv0 32)))))))"
                     }
                   } else {
-                    unconstraintOutputVars = name :: unconstraintOutputVars;
+                    unconstraintOutputVars = (name + "#" + inst) :: unconstraintOutputVars;
                     ""
                   }
                 case (CharVal(name, value), inst) =>
@@ -202,7 +202,7 @@ object AFRepair {
                   if(afVars.contains(varName)) {
                     s"(assert (= (_ bv$valAsInt 8) (select $varName (_ bv0 32))))"
                   } else {
-                    unconstraintOutputVars = name :: unconstraintOutputVars;
+                    unconstraintOutputVars = (name + "#" + inst) :: unconstraintOutputVars;
                     ""
                   }
               }).mkString("\n")
