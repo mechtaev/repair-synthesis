@@ -89,9 +89,9 @@ object Driver {
             //TODO either sort of drop instances
             patchString = patchString + id + "\n- " + oldE + "\n+ " + newE + "\n"
         })
+        Utils.writeToFile("patch", patchString)
     }
-
-    Utils.writeToFile("patch", patchString)
+    
   }
 
 }

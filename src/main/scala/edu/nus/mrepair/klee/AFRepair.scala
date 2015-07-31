@@ -258,6 +258,10 @@ object AFRepair {
     println("[synthesis] Angelic values generated: " + repairedTests.length)
     println("[synthesis] Test cases covered: " + repairedTests.distinct.length + "/" + testSuiteIds.length)
 
+    if (repairedTests.distinct.length < testSuiteIds.length) {
+      exit(0)
+    }
+
     af.toList.toMap
   }
 
