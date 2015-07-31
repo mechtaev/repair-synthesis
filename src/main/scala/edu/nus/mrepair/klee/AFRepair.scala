@@ -106,8 +106,11 @@ object AFRepair {
               case (acc, (_, _, ("env" :: name :: Nil, v))) =>
                 renameVal(v, name) :: acc
             })
-            AngelicValue(context, angelic.get, id, inst)
-        })
+            angelic match {
+              case None => Nil //this probably happens when value is not used
+              case Some(angelicValue) => AngelicValue(context, angelicValue, id, inst) :: Nil
+            }
+        }).flatten
     }).flatten
   }
 
