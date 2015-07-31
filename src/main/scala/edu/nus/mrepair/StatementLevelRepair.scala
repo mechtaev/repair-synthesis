@@ -192,7 +192,10 @@ object StatementLevelRepair {
 //    println("[info] for statement " + stmtId + " instance " + exeId + " using components: " + variablesForThisExpr)
 
     //this is only for instances:
-    val additionalComponents = if (exeId == 0) Nil else selectAdditionalComponents(componentLevel, stmtId, exeId)
+    //val additionalComponents = if (exeId == 0) Nil else selectAdditionalComponents(componentLevel, stmtId, exeId)
+
+    val additionalComponents = selectAdditionalComponents(componentLevel, stmtId, exeId)
+
     if (Utils.enableLogging) prettyList(additionalComponents).log("rc-additional-components-s" + stmtId + "-e" + exeId + ".log")
 
     (representation, components, additionalComponents)
