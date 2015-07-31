@@ -8,7 +8,7 @@
     },
     "simplification" : false,
     "spaceReduction": true,
-    "componentLevel" : "alternatives",
+    "componentLevel" : "angelicfix",
     "solverBound" : 3,
     "solverTimeout" : 50000
 }

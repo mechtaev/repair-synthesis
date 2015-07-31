@@ -240,6 +240,8 @@ object VCCUtils {
         }
       } else {
         if (Utils.verbose) println("[warn] using uninterpreted function: " + op)
+        println("[synthesis] Error: unsupported SMTLIB symbol: " + op)
+        println("[synthesis] the following symbols are currently supported: " + builtinSymbols)
         ???
       }
     }
@@ -400,6 +402,7 @@ object VCCUtils {
         case Arithmetics()  => (intouts >= 1)
         case Variables()    => true
         case Custom()       => true
+        case Angelicfix()   => true
       }
     } catch {
       case e: Exception =>

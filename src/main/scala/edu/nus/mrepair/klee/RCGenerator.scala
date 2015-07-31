@@ -41,7 +41,7 @@ object RCGenerator {
   }
 
   // TODO instead of this I need to give proper names to all instances
-  def renameInst(name: String, stmtId: Int, instId: Int): String = name + stmtId.toString + "#" + instId.toString
+  def renameInst(name: String, stmtId: Int, instId: Int): String = name + "#" + stmtId.toString + "#" + instId.toString
 
   //TODO if a variable is used as both integer and boolean, I need wrap it by component (x != 0)
   def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)]): (AngelicForest, RepairableBindings) = {
@@ -188,6 +188,10 @@ object RCGenerator {
     (RepairCondition(hardStructure ++ semanticsConstraints, softStructure), oldExprs, components)
   }
 
+  def beautifyResult(ugly: ProgramFormulaExpression): ProgramFormulaExpression = {
+    ProgramFormulaUtils.substitute(ugly, { case ProgramVariable(n, t) => Variable(ProgramVariable(n.split("#").head, t)) } , { case u => Variable(u) })
+  }
+
 
   def solve(rc: RepairCondition,
             components: List[Component],
@@ -207,8 +211,8 @@ object RCGenerator {
         val old = oldExpressions.toMap
         val changes = newAssignments.map({
           case (v, expr) =>
-            val s :: i :: Nil = v.name.drop("angelic".length).split("#").map(_.toInt).toList
-            (s, i, old(v.name), expr)
+            val s :: i :: Nil = v.name.split("#").tail.map(_.toInt).toList
+            (s, i, beautifyResult(old(v.name)), beautifyResult(expr))
         })
         
         (Left(changes), MaxSMTPlay.lastStat)

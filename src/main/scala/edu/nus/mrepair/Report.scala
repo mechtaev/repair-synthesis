@@ -45,6 +45,7 @@ object Report {
         case "comparison"   => Comparison()
         case "arithmetics"  => Arithmetics()
         case "custom"       => Custom()
+        case "angelicfix"   => Angelicfix()
       }
     })
 
@@ -57,6 +58,7 @@ object Report {
       case Comparison()   => jString("comparison")
       case Arithmetics()  => jString("arithmetics")
       case Custom()       => jString("custom")
+      case Angelicfix()   => jString("angelicfix")
     })
 
   implicit def SuspiciousLocationsCodecJson : CodecJson[SuspiciousLocations] =
