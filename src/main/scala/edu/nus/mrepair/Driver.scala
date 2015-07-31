@@ -79,16 +79,19 @@ object Driver {
     val config = Report.parseConfig(new File(configFile))
     val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
     val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
+    var patchString = ""
     patch match {
-      case Right(isSolvingTimeout) => println("FAIL. isTimeout = " + isSolvingTimeout)
+      case Right(isSolvingTimeout) => println("[synthesis] FAIL. isTimeout = " + isSolvingTimeout)
       case Left(diff) =>
+        println("[synthesis] SUCCESS. patch file is generated")
         diff.groupBy(_._1).foreach({
           case (_, (id, inst, oldE, newE) :: _) =>
             //TODO either sort of drop instances
-            //TODO write it to "patch" file instead
-            println(id + "\n- " + oldE + "\n+ " + newE)
+            patchString = patchString + id + "\n- " + oldE + "\n+ " + newE + "\n"
         })
     }
+
+    Utils.writeToFile("patch", patchString)
   }
 
 }
