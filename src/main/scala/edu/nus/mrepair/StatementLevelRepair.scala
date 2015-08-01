@@ -224,7 +224,7 @@ object StatementLevelRepair {
   def selectAdditionalComponents(level: ComponentLevel, stmtId: Int, exeId: Int): List[Component] = {
     level match {
       case Constants()    => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
-      case Angelicfix()   => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil //TODO add variables here
+      case Angelicfix()   => IntegerConstantComponent() :: BooleanConstantComponent() :: ComponentLibrary.Standard.int2bool :: VariableComponentSelector.select(stmtId, exeId)
       case Alternatives() => Nil
       case Booleans()     => (Or() :: And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) //Impl(), Iff()
       case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Less() :: LessOrEqual() :: Nil).map(ComponentLibrary.componentByOp)

@@ -136,6 +136,27 @@ object RCGenerator {
       angelicForest.foreach({ case (t, aps) => println("[synthesis] test " + t + ": " + aps) })
     }
 
+    val usedVariables = suspicious.map({
+      case (stmtId, expr) =>
+        (stmtId, VCCUtils.collectVarNames(expr))
+    }).toMap
+
+    val additionalVariables = angelicForest.map({
+      case (_, aps) =>
+        aps.map({
+          case ap =>
+            ap.map({
+              case AngelicValue(ctx, _, stmtId, _) =>
+                ctx.map({ case varval => (stmtId, AngelicFix.getName(varval)) })
+            }).flatten
+        }).flatten
+    }).flatten.groupBy(_._1).map({
+      case (stmtId, vars) =>
+        (stmtId, vars.toList.map(_._2).filter({ case n => !usedVariables(stmtId).contains(n)}).distinct)
+    })
+
+    VariableComponentSelector.angelicfixVariables = additionalVariables
+
     val (repairableObjects, extractedComponents) = 
       extractRepairableObjects(repairableBindings, repairConfig.synthesisConfig, repairConfig.componentLevel)
 

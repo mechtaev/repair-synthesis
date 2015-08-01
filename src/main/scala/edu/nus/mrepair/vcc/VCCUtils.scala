@@ -43,6 +43,15 @@ object VCCUtils {
     })
   }
 
+  def collectVarNames(e: IExpr): List[String] = {
+    SMTLIBExpr.fold[List[String]](e, {
+      case s: ISymbol =>
+        if (builtinSymbols.contains(s.value())) { case l => l.flatten }
+        else { case l => s.value() :: l.flatten }
+      case o => { case l => l.flatten }
+    })
+  }
+
   def getVariableRenamerByType(id: Int, typ: Option[Type]): (String => String) = {
     (name: String) => typ match {
       //FIXME hardcoded values

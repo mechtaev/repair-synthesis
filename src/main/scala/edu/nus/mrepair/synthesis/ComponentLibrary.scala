@@ -36,6 +36,8 @@ object ComponentLibrary {
 
     def ite     = componentByExpression(Ite(Variable(a), Variable(x), Variable(y)))
 
+    def int2bool = componentByExpression(UnaryOperation(Not(), BinaryOperation(Equal(), Variable(x), IntegerValue(0))))
+
   }
 
   def componentByOp(op: Operator): FunctionComponent = {
