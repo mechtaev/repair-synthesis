@@ -11,9 +11,13 @@ object VariableComponentSelector {
 
   def select(stmtId: Int, exeId: Int): List[VariableComponent] = {
 
-    return angelicfixVariables(stmtId).map({
-      case name => VariableComponent(ProgramVariable(name + "#" + stmtId + "#" + exeId, IntegerType()))
-    })
+    if (angelicfixVariables.exists(_._1 == stmtId)) {
+      return angelicfixVariables(stmtId).map({
+        case name => VariableComponent(ProgramVariable(name + "#" + stmtId + "#" + exeId, IntegerType()))
+      })
+    } else {
+      return Nil
+    }
 
 //     (Utils.logBenchmarkName, Utils.logBenchmarkVersion) match {       
 
