@@ -407,6 +407,7 @@ object VCCUtils {
         case Constants()    => true
         case Alternatives() => (boolouts >= 2) || (intouts >= 2)
         case Booleans()     => (boolouts >= 1)
+        case Integers()     => (intouts >= 1)
         case Comparison()   => (boolouts >= 1) && (intouts >= 2)
         case Arithmetics()  => (intouts >= 1)
         case Variables()    => true

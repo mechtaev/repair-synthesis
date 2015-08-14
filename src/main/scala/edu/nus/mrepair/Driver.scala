@@ -76,21 +76,36 @@ object Driver {
 
     val testUniverseDir :: testSuiteStr :: configFile :: extractedDir :: smtFiles = args.toList
     val testSuiteIds = testSuiteStr.split("\\s+").toList
-    val config = Report.parseConfig(new File(configFile))
-    val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
-    val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
-    var patchString = ""
-    patch match {
-      case Right(isSolvingTimeout) => println("[synthesis] FAIL. isTimeout = " + isSolvingTimeout)
-      case Left(diff) =>
-        println("[synthesis] SUCCESS. patch file is generated")
-        diff.groupBy(_._1).foreach({
-          case (_, (id, inst, oldE, newE) :: _) =>
-            //TODO either sort of drop instances
-            patchString = patchString + id + "\n- " + oldE + "\n+ " + newE + "\n"
-        })
-        Utils.writeToFile("patch", patchString)
+    val configTemplate = Report.parseConfig(new File(configFile))
+    val levels = configTemplate.componentLevel match {
+      case Angelicfix() => Alternatives() :: Booleans() :: Integers() :: Comparison() :: Arithmetics() :: Nil
+      case other => other :: Nil
     }
+    val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
+    levels.foreach({
+      case level =>
+        println("[synthesis] trying level " + level)
+        val config = SynthesisConfig(synthesisConfig = configTemplate.synthesisConfig,
+          simplification = configTemplate.simplification,
+          spaceReduction = configTemplate.spaceReduction,
+          solverBound = configTemplate.solverBound,
+          solverTimeout = configTemplate.solverTimeout,
+          componentLevel = level)
+        val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
+        var patchString = ""
+        patch match {
+          case Right(isSolvingTimeout) => println("[synthesis] FAIL. isTimeout = " + isSolvingTimeout)
+          case Left(diff) =>
+            println("[synthesis] SUCCESS. patch file is generated")
+            diff.groupBy(_._1).foreach({
+              case (_, (id, inst, oldE, newE) :: _) =>
+                //TODO either sort of drop instances
+                patchString = patchString + id + "\n- " + oldE + "\n+ " + newE + "\n"
+            })
+            Utils.writeToFile("patch", patchString)
+            return
+        }
+    })
     
   }
 

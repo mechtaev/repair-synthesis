@@ -13,6 +13,7 @@ case class Variables() extends ComponentLevel
 case class Constants() extends ComponentLevel
 case class Alternatives() extends ComponentLevel
 case class Booleans() extends ComponentLevel
+case class Integers() extends ComponentLevel
 case class Comparison() extends ComponentLevel
 case class Arithmetics() extends ComponentLevel
 case class Custom() extends ComponentLevel
@@ -72,7 +73,7 @@ object StatementLevelRepair {
       def alts: List[FunctionComponent] = ComponentLibrary.altOps(op).map(ComponentLibrary.componentByOp)
       val alternatives = (componentLevel, op) match {
         case (Alternatives(), _) => alts
-        case (Angelicfix(), _) => alts
+//        case (Angelicfix(), _) => alts
 
         // case (Booleans(), And()) => alts
         // case (Booleans(), Or()) => alts
@@ -208,8 +209,9 @@ object StatementLevelRepair {
     level match {
       case Constants()    => IntegerConstantComponent() :: BooleanConstantComponent() :: IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
       case Alternatives() => Nil
-      case Angelicfix()   => ???
+      case Angelicfix()   => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
       case Booleans()     => BooleanConstantComponent() :: (Or() :: And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) //Impl(), Iff()
+      case Integers()     => Nil
       case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Less() :: LessOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
       case Arithmetics()  => IntegerConstantComponent() :: IntegerConstantComponent() :: (Add() :: Sub() /*:: Mult() :: Div()*/ :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
       case Variables()    =>
@@ -224,11 +226,12 @@ object StatementLevelRepair {
   def selectAdditionalComponents(level: ComponentLevel, stmtId: Int, exeId: Int): List[Component] = {
     level match {
       case Constants()    => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
-      case Angelicfix()   => IntegerConstantComponent() :: BooleanConstantComponent() :: ComponentLibrary.Standard.int2bool :: VariableComponentSelector.select(stmtId, exeId)
+      case Angelicfix()   => ???
       case Alternatives() => Nil
-      case Booleans()     => (Or() :: And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) //Impl(), Iff()
-      case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Less() :: LessOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
-      case Arithmetics()  => (Add() :: Sub() /*:: Mult() :: Div()*/ :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
+      case Booleans()     => BooleanConstantComponent() :: ComponentLibrary.Standard.int2bool :: VariableComponentSelector.select(stmtId, exeId)
+      case Integers()     => IntegerConstantComponent() :: ComponentLibrary.Standard.add :: VariableComponentSelector.select(stmtId, exeId)
+      case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
+      case Arithmetics()  => (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
       case Variables()    => VariableComponentSelector.select(stmtId, exeId)
       case Custom()       => Nil
     }

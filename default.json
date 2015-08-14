@@ -10,5 +10,5 @@
     "spaceReduction": true,
     "componentLevel" : "angelicfix",
     "solverBound" : 3,
-    "solverTimeout" : 50000
+    "solverTimeout" : 100000
 }

@@ -166,7 +166,7 @@ object RCGenerator {
     })
 
     //should select components somehow (existing + additional + shared)
-    val sharedComponents: List[Component] = Nil
+    val sharedComponents: List[Component] = Nil //getSharedComponents(repairConfig.componentLevel)
 
     val (softStructureExpr, hardStructureExpr) = generateStructureConstraints(repairableObjects, repairConfig.synthesisConfig)
 
