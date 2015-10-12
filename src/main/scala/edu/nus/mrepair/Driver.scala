@@ -11,6 +11,7 @@ import java.io.File
 import edu.nus.mrepair.synthesis.Formula
 import Formula.{Variable, IntegerType, IntegerValue}
 import edu.nus.mrepair.vcc.drivers._
+import edu.nus.mrepair.klee.AFParser
 import edu.nus.mrepair.klee.AFRepair
 
 object Driver {
@@ -30,6 +31,8 @@ object Driver {
       System.loadLibrary("libz3")
       System.loadLibrary("libz3java")
     }
+
+    // for DirectFix:
 
     // val parser = new scopt.OptionParser[ProgramOptions]("repair-maxsat") {
     //   head("repair-maxsat", "0.0")
@@ -67,47 +70,46 @@ object Driver {
 
     // println(Report.toString(result))
 
+
+    // for Angelix:
+
+
     //TODO it is a hack. actually it should be fixed in maxsmt-playgroud
-    val dir = new File("log/")
-    if(!dir.exists()) dir.mkdirs()
+    // val dir = new File("log/")
+    // if(!dir.exists()) dir.mkdirs()
 
+    //Utils.enableLogging = true
 
-    Utils.enableLogging = true
+    // Usage:
+    // synthesis <angelic-forest-file> <extacted-dir> <output-patch-file> <config-file> <level>+
+    //   exitcode: 0 unless error
+    //   stdout: SUCCESS, FAIL, TIMEOUT
+    //   stderr: logging
 
-    val testUniverseDir :: testSuiteStr :: configFile :: extractedDir :: smtFiles = args.toList
-    val testSuiteIds = testSuiteStr.split("\\s+").toList
-    val configTemplate = Report.parseConfig(new File(configFile))
-    val levels = configTemplate.componentLevel match {
-      case Angelicfix() => Alternatives() :: Booleans() :: Integers() :: Comparison() :: Arithmetics() :: Nil
-      case other => other :: Nil
-    }
-    val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
-    //TODO: here I need to split
-    levels.foreach({
-      case level =>
-        println("[synthesis] trying level " + level)
-        val config = SynthesisConfig(synthesisConfig = configTemplate.synthesisConfig,
-          simplification = configTemplate.simplification,
-          spaceReduction = configTemplate.spaceReduction,
-          solverBound = configTemplate.solverBound,
-          solverTimeout = configTemplate.solverTimeout,
-          componentLevel = level)
-        val patch = AFRepair.generatePatch(config, extractedDir, angelicForest)
-        var patchString = ""
-        patch match {
-          case Right(isSolvingTimeout) => println("[synthesis] FAIL. isTimeout = " + isSolvingTimeout)
-          case Left(diff) =>
-            println("[synthesis] SUCCESS. patch file is generated")
-            diff.groupBy(_._1).foreach({
-              case (_, (id, inst, oldE, newE) :: _) =>
-                //TODO either sort of drop instances
-                patchString = patchString + id + "\n- " + oldE + "\n+ " + newE + "\n"
-            })
-            Utils.writeToFile("patch", patchString)
-            return
+    val angelicForestFile :: extractedDir :: outputFile :: configFile :: Nil = args.toList
+
+    val config = Report.parseConfig(new File(configFile))
+    //val angelicForest = AFRepair.generateAngelicForest(smtFiles, testUniverseDir, testSuiteIds)
+    val angelicForest = AFParser.parse(new File(angelicForestFile))
+    val (patch, ids) = AFRepair.generatePatch(config, extractedDir, angelicForest)
+    var patchString = ""
+    patch match {
+      case Right(isSolvingTimeout) =>
+        if (isSolvingTimeout) {
+          println("TIMEOUT")
+        } else {
+          println("FAIL")
         }
-    })
-    
+      case Left(diff) =>
+        println("SUCCESS")
+        diff.groupBy(_._1).foreach({
+          case (_, (id, inst, oldE, newE) :: _) =>
+            //TODO either sort of drop instances
+            patchString = patchString + ids(id) + "\n" + oldE + "\n" + newE + "\n"
+        })
+        Utils.writeToFile(outputFile, patchString)
+        return
+    }
   }
 
 }

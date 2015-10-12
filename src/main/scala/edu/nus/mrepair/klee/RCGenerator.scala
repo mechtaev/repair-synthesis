@@ -20,14 +20,7 @@ import edu.nus.mrepair.Utils.SimpleLogger._
 
 object RCGenerator {
 
-  def debugMode(): Boolean = {
-    sys.env.get("AF_DEBUG") match {
-      case None => false
-      case _ => true
-    }
-  }
-
-  def getAllInstances(af: AngelicForest, stmtId: Int): List[Int] = {
+  def getAllInstances(af: AngelicForest, stmtId: String): List[Int] = {
     af.map({
       case (_, aps) =>
         aps.map({
@@ -44,11 +37,11 @@ object RCGenerator {
   def renameInst(name: String, stmtId: Int, instId: Int): String = name + "#" + stmtId.toString + "#" + instId.toString
 
   //TODO if a variable is used as both integer and boolean, I need wrap it by component (x != 0)
-  def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)]): (AngelicForest, RepairableBindings) = {
+  def correctTypes(afRaw: AngelicForest, suspicious: List[(Int, IExpr)], suspiciousIds: List[String]): (AngelicForest, RepairableBindings) = {
     var af = afRaw
 
     // check what is the angelic value type for particular statement
-    def expectedTopTypeIsBool(stmtId: Int): Boolean = {
+    def expectedTopTypeIsBool(stmtId: String): Boolean = {
       val isBooleanList = af.map({
         case (_, ap) =>
           ap.map({
@@ -66,13 +59,13 @@ object RCGenerator {
       val conj = isBooleanList.foldLeft(true)(_ && _)
 
       if (disj && !conj) {
-        println("[synthesis] WARNING: inconsistent angelic values types for stmt " + stmtId)
+        System.err.println("WARNING: inconsistent angelic values types for stmt " + stmtId)
       }
 
       disj
     }
 
-    def fixAF(constraints: Set[String], topTypeIsBool: Boolean, stmtId: Int): Unit = {
+    def fixAF(constraints: Set[String], topTypeIsBool: Boolean, stmtId: String): Unit = {
       def fixContext(vals: List[VariableValue]): List[VariableValue] = {
         vals.map({
           case IntVal(name, value) =>
@@ -98,10 +91,10 @@ object RCGenerator {
 
     val suspiciousWithTypeinfo = suspicious.map({
       case (stmtId, expr) =>
-        val expectedTypeIsBool = expectedTopTypeIsBool(stmtId)
+        val expectedTypeIsBool = expectedTopTypeIsBool(suspiciousIds(stmtId))
         val (typeConstraints, topIsBoolean) = VCCUtils.getTypeConstraints(expr, expectedTypeIsBool)
         val fixedExpr = if (expectedTypeIsBool && !topIsBoolean) VCCUtils.castIntToBool(expr) else expr
-        fixAF(typeConstraints, topIsBoolean, stmtId)
+        fixAF(typeConstraints, topIsBoolean, suspiciousIds(stmtId))
         def typeOf(s: String): Type = {
           if (typeConstraints.contains(s)) BooleanType()
           else IntegerType()
@@ -112,7 +105,7 @@ object RCGenerator {
     val repairableBindings =
       suspiciousWithTypeinfo.map({
         case (stmtId, expr, typeOf, topIsBool) =>
-          val instIds = getAllInstances(af, stmtId)
+          val instIds = getAllInstances(af, suspiciousIds(stmtId))
           instIds.map({
             case instId =>
               val Some(pfe) = VCCUtils.translateIfRepairable(expr, { case n => Some(typeOf(n)) })
@@ -127,14 +120,13 @@ object RCGenerator {
 
   def generate(angelicForestRaw: AngelicForest,
                suspicious: List[(Int, IExpr)],
+               suspiciousIds: List[String],
                repairConfig: SynthesisConfig): (RepairCondition, List[(String, ProgramFormulaExpression)], List[Component]) = {
 
-    val (angelicForest, repairableBindings) = correctTypes(angelicForestRaw, suspicious)
+    val (angelicForest, repairableBindings) = correctTypes(angelicForestRaw, suspicious, suspiciousIds)
 
-    if (debugMode()) {
-      println("[synthesis] Angelic forest with inferred types:")
-      angelicForest.foreach({ case (t, aps) => println("[synthesis] test " + t + ": " + aps) })
-    }
+    System.err.println("Angelic forest with inferred types:")
+    angelicForest.foreach({ case (t, aps) => System.err.println("test " + t + ": " + aps) })
 
     val usedVariables = suspicious.map({
       case (stmtId, expr) =>
@@ -147,7 +139,7 @@ object RCGenerator {
           case ap =>
             ap.map({
               case AngelicValue(ctx, _, stmtId, _) =>
-                ctx.map({ case varval => (stmtId, AngelicFix.getName(varval)) })
+                ctx.map({ case varval => (suspiciousIds.indexOf(stmtId), AngelicFix.getName(varval)) })
             }).flatten
         }).flatten
     }).flatten.groupBy(_._1).map({
@@ -186,12 +178,12 @@ object RCGenerator {
                 ap.foldLeft(constTrue)({
                   case (acc, AngelicValue(context, value, stmdId, instId)) =>
                     val angelic = value match {
-                      case BoolVal(name, v) => (bvar(renameInst(name, stmdId, instId)) <=> v)
-                      case IntVal(name, v) => (ivar(renameInst(name, stmdId, instId)) === v)
+                      case BoolVal(name, v) => (bvar(renameInst(name, suspiciousIds.indexOf(stmdId), instId)) <=> v)
+                      case IntVal(name, v) => (ivar(renameInst(name, suspiciousIds.indexOf(stmdId), instId)) === v)
                     }
                     val clause = context.foldLeft(angelic)({
-                      case (e, IntVal(name, v)) => (ivar(renameInst(name, stmdId, instId)) === v) & e
-                      case (e, BoolVal(name, v)) => (bvar(renameInst(name, stmdId, instId)) <=> v) & e
+                      case (e, IntVal(name, v)) => (ivar(renameInst(name, suspiciousIds.indexOf(stmdId), instId)) === v) & e
+                      case (e, BoolVal(name, v)) => (bvar(renameInst(name, suspiciousIds.indexOf(stmdId), instId)) <=> v) & e
                     })
                     (clause & acc)
             })}).foldLeft(constFalse)(_ | _)

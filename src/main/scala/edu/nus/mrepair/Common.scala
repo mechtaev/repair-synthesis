@@ -85,7 +85,7 @@ object AngelicFix {
     }
   }
 
-  case class AngelicValue(context: List[VariableValue], value: VariableValue, stmtId: Int, instId: Int)
+  case class AngelicValue(context: List[VariableValue], value: VariableValue, expression: String, instId: Int)
 
   type AngelicPath = List[AngelicValue]
 
