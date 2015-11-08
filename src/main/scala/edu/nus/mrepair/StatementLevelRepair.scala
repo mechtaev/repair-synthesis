@@ -9,19 +9,21 @@ import edu.nus.mrepair.Utils.SimpleLogger._
 import edu.nus.mrepair.Utils._
 
 sealed trait ComponentLevel
-case class Variables() extends ComponentLevel
-case class Constants() extends ComponentLevel
 case class Alternatives() extends ComponentLevel
-case class Booleans() extends ComponentLevel
-case class Integers() extends ComponentLevel
-case class Comparison() extends ComponentLevel
-case class Arithmetics() extends ComponentLevel
-case class Custom() extends ComponentLevel
-case class Angelicfix() extends ComponentLevel
+case class IntegerConstants() extends ComponentLevel
+case class BooleanConstants() extends ComponentLevel
+case class Variables() extends ComponentLevel
+case class BasicArithmetic() extends ComponentLevel
+case class BasicLogic() extends ComponentLevel
+case class BasicInequalities() extends ComponentLevel
+case class ExtendedArithmetic() extends ComponentLevel
+case class ExtendedLogic() extends ComponentLevel
+case class ExtendedInequalities() extends ComponentLevel
+case class MixedConditional() extends ComponentLevel
 
 object StatementLevelRepair {
 
-  //FIXME some magic number
+  //FIXME magic number
   val phantomExeId = 123456
 
   //assigned variable, extracted components, additional components, presentations
@@ -73,23 +75,6 @@ object StatementLevelRepair {
       def alts: List[FunctionComponent] = ComponentLibrary.altOps(op).map(ComponentLibrary.componentByOp)
       val alternatives = (componentLevel, op) match {
         case (Alternatives(), _) => alts
-//        case (Angelicfix(), _) => alts
-
-        // case (Booleans(), And()) => alts
-        // case (Booleans(), Or()) => alts
-        // case (Booleans(), Iff()) => alts
-        // case (Booleans(), Impl()) => alts
-
-        // case (Comparison(), Equal()) => alts
-        // case (Comparison(), Greater()) => alts
-        // case (Comparison(), Less()) => alts
-        // case (Comparison(), GreaterOrEqual()) => alts
-        // case (Comparison(), LessOrEqual()) => alts
-
-        // case (Arithmetics(), Add()) => alts
-        // case (Arithmetics(), Sub()) => alts
-        // case (Arithmetics(), Mult()) => alts
-        // case (Arithmetics(), Div()) => alts
         case _ => Nil
       }
       components = (component :: alternatives) ++ components
@@ -204,36 +189,30 @@ object StatementLevelRepair {
     (representation, components, additionalComponents)
   }
 
-  // here should be variables somehow
   def getSharedComponents(level: ComponentLevel): List[Component] = {
-    level match {
-      case Constants()    => IntegerConstantComponent() :: BooleanConstantComponent() :: IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
-      case Alternatives() => Nil
-      case Angelicfix()   => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
-      case Booleans()     => BooleanConstantComponent() :: (Or() :: And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) //Impl(), Iff()
-      case Integers()     => Nil
-      case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Less() :: LessOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
-      case Arithmetics()  => IntegerConstantComponent() :: IntegerConstantComponent() :: (Add() :: Sub() /*:: Mult() :: Div()*/ :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
-      case Variables()    =>
-        val stmtId = 0 //FIXME add scope information
-        val exeId = 0 //TODO how to select variables for instances?
-        VariableComponentSelector.select(stmtId, exeId)
-      case Custom()       => //(Equal() :: Equal() :: Nil).map(ComponentLibrary.componentByOp)
-        /*(Equal() :: Nil).map(ComponentLibrary.componentByOp) ++  (ComponentLibrary.Standard.ite ::*/( IntegerConstantComponent() :: BooleanConstantComponent() :: Nil) ++ VariableComponentSelector.select(0, 0)
-    }
+    ???
   }
 
   def selectAdditionalComponents(level: ComponentLevel, stmtId: Int, exeId: Int): List[Component] = {
     level match {
-      case Constants()    => IntegerConstantComponent() :: BooleanConstantComponent() :: Nil
-      case Angelicfix()   => ???
       case Alternatives() => Nil
-      case Booleans()     => BooleanConstantComponent() :: ComponentLibrary.Standard.int2bool :: VariableComponentSelector.select(stmtId, exeId)
-      case Integers()     => IntegerConstantComponent() :: ComponentLibrary.Standard.add :: VariableComponentSelector.select(stmtId, exeId)
-      case Comparison()   => (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
-      case Arithmetics()  => (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
-      case Variables()    => VariableComponentSelector.select(stmtId, exeId)
-      case Custom()       => Nil
+      case IntegerConstants() => IntegerConstantComponent() :: Nil
+      case BooleanConstants() => BooleanConstantComponent() :: Nil
+      case Variables() => VariableComponentSelector.select(stmtId, exeId)
+      case BasicArithmetic() =>
+        IntegerConstantComponent() :: (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
+      case BasicLogic() =>
+        ComponentLibrary.Standard.int2bool :: (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp)
+      case BasicInequalities() =>
+        IntegerConstantComponent() :: (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
+      case ExtendedArithmetic() =>
+        VariableComponentSelector.select(stmtId, exeId) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
+      case ExtendedLogic() =>
+        VariableComponentSelector.select(stmtId, exeId) ++ (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp)
+      case ExtendedInequalities() =>
+        VariableComponentSelector.select(stmtId, exeId) ++ (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
+      case MixedConditional() =>
+        ??? /* TODO: this is for heartbleed */
     }
   }
 

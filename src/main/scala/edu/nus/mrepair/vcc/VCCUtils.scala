@@ -404,15 +404,17 @@ object VCCUtils {
       val (intouts, boolouts) = expr.accept(new RepairableAnalyzer(typeOf))
       //TODO should we take into consideration mutiple components occurences?
       config.componentLevel match {
-        case Constants()    => true
-        case Alternatives() => (boolouts >= 2) || (intouts >= 2)
-        case Booleans()     => (boolouts >= 1)
-        case Integers()     => (intouts >= 1)
-        case Comparison()   => (boolouts >= 1) && (intouts >= 2)
-        case Arithmetics()  => (intouts >= 1)
-        case Variables()    => true
-        case Custom()       => true
-        case Angelicfix()   => true
+        case Alternatives()         => (boolouts >= 2) || (intouts >= 2)
+        case IntegerConstants()     => (intouts >= 1)
+        case BooleanConstants()     => (boolouts >= 1)
+        case Variables()            => true
+        case BasicArithmetic()      => (intouts >= 1)
+        case BasicLogic()           => (boolouts >= 1) || (intouts >= 1) // because we use int2bool
+        case BasicInequalities()    => (boolouts >= 1) && (intouts >= 1)
+        case ExtendedArithmetic()   => (intouts >= 1)
+        case ExtendedLogic()        => (boolouts >= 1)
+        case ExtendedInequalities() => (boolouts >= 1) && (intouts >= 1)
+        case MixedConditional()     => (boolouts >= 1)
       }
     } catch {
       case e: Exception =>

@@ -38,29 +38,33 @@ object Report {
       str <- c.as[String]
     } yield {
       str match {
-        case "constants"    => Constants()
-        case "variables"    => Variables()
-        case "alternatives" => Alternatives()
-        case "booleans"     => Booleans()
-        case "integers"     => Integers()
-        case "comparison"   => Comparison()
-        case "arithmetics"  => Arithmetics()
-        case "custom"       => Custom()
-        case "angelicfix"   => Angelicfix()
+        case "alternatives"          => Alternatives()
+        case "integer-constants"     => IntegerConstants()
+        case "boolean-constants"     => BooleanConstants()
+        case "variables"             => Variables()
+        case "basic-arithmetic"      => BasicArithmetic()
+        case "basic-logic"           => BasicLogic()
+        case "basic-inequalities"    => BasicInequalities()
+        case "extended-arithmetic"   => ExtendedArithmetic()
+        case "extended-logic"        => ExtendedLogic()
+        case "extended-inequalities" => ExtendedInequalities()
+        case "mixed-conditional"     => MixedConditional()
       }
     })
 
   implicit def ComponentLevelEncodeJson: EncodeJson[ComponentLevel] =
     EncodeJson({
-      case Constants()    => jString("constants")
-      case Variables()    => jString("variables")
-      case Alternatives() => jString("alternatives")
-      case Booleans()     => jString("booleans")
-      case Integers()     => jString("integers")
-      case Comparison()   => jString("comparison")
-      case Arithmetics()  => jString("arithmetics")
-      case Custom()       => jString("custom")
-      case Angelicfix()   => jString("angelicfix")
+        case Alternatives()         => jString("alternatives")
+        case IntegerConstants()     => jString("integer-constants")
+        case BooleanConstants()     => jString("boolean-constants")
+        case Variables()            => jString("variables")
+        case BasicArithmetic()      => jString("basic-arithmetic")
+        case BasicLogic()           => jString("basic-logic")
+        case BasicInequalities()    => jString("basic-inequalities")
+        case ExtendedArithmetic()   => jString("extended-arithmetic")
+        case ExtendedLogic()        => jString("extended-logic")
+        case ExtendedInequalities() => jString("extended-inequalities")
+        case MixedConditional()     => jString("mixed-conditional")
     })
 
   implicit def SuspiciousLocationsCodecJson : CodecJson[SuspiciousLocations] =
