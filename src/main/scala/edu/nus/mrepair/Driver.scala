@@ -78,7 +78,7 @@ object Driver {
     // val dir = new File("log/")
     // if(!dir.exists()) dir.mkdirs()
 
-    //Utils.enableLogging = true
+    Utils.enableLogging = false
 
     // Usage:
     // synthesis <angelic-forest-file> <extacted-dir> <output-patch-file> <config-file> <level>+

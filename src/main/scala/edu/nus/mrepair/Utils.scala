@@ -28,9 +28,9 @@ object Utils {
     implicit def stringToLogData(data: String): LogData = {
       new LogData {
         def log(file: String): Unit = {
-          // val dir = new File("log/" + logBenchmarkName + "/v" + logBenchmarkVersion + "/")
-          // if(!dir.exists()) dir.mkdirs()
-          // writeToFile(dir.getAbsolutePath() + "/" + file, data)
+          val dir = new File("log/" + logBenchmarkName + "/v" + logBenchmarkVersion + "/")
+          if(!dir.exists()) dir.mkdirs()
+          writeToFile(dir.getAbsolutePath() + "/" + file, data)
         }        
       }
     }

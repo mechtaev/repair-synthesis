@@ -52,7 +52,7 @@ object Formula {
     override def toString: String = value.toString
   }
   case class BooleanValue[V](value: Boolean) extends Value[V] {
-    override def toString: String = value.toString
+    override def toString: String = if (value) { "1" } else { "0" }
   }
   case class Variable[V](variable: V) extends FormulaExpression[V] {
     override def toString: String = variable.toString

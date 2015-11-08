@@ -161,6 +161,8 @@ object VCCUtils {
     }
 
     override def visit(e: IExpr.ISymbol): ProgramFormulaExpression = {
+      if (e.value == "true") return BooleanValue(true)
+      if (e.value == "false") return BooleanValue(false)
       Variable(ProgramVariable(e.value, typeOf(e.value).get))
     }
 
@@ -168,11 +170,6 @@ object VCCUtils {
       IntegerValue(e.intValue)
     }
 
-    //TODO here should be something about booleans:
-    // override def visit(e: ): ProgramFormulaExpression = {
-    //   BooleanValue(???)
-    // }
-  
   }
 
   /*
@@ -347,6 +344,7 @@ object VCCUtils {
     }
 
     override def visit(e: IExpr.ISymbol): (Int, Int) = {
+      if (e.value == "true" || e.value == "false") return (0, 1)
       val outtype = typeOf(e.value).get
       outtype match {
         case IntegerType() => (1, 0)
@@ -359,11 +357,6 @@ object VCCUtils {
       (1, 0)
     }
 
-    //TODO here should be something about booleans:
-    // override def visit(e: ): ProgramFormulaExpression = {
-    //   BooleanValue(???)
-    // }
-  
   }
 
 
