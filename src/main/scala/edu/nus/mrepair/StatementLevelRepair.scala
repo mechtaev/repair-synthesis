@@ -206,11 +206,11 @@ object StatementLevelRepair {
       case BasicInequalities() =>
         IntegerConstantComponent() :: (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
       case ExtendedArithmetic() =>
-        VariableComponentSelector.select(stmtId, exeId) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
+        IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
       case ExtendedLogic() =>
-        VariableComponentSelector.select(stmtId, exeId) ++ (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp)
+        ComponentLibrary.Standard.int2bool :: VariableComponentSelector.select(stmtId, exeId) ++ (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp)
       case ExtendedInequalities() =>
-        VariableComponentSelector.select(stmtId, exeId) ++ (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
+        IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
       case MixedConditional() =>
         ??? /* TODO: this is for heartbleed */
     }
