@@ -77,12 +77,14 @@ object Z3Text extends DecisionProcedure {
                      softClauses: List[SolverInputFormula],
                      components: List[Component],
                      simplification: Boolean,
+                     reuseStructure: Boolean,
                      bound: Int,
                      timeout: Int):
                        Either[(Int, List[(ComponentVariable, Option[Value[ComponentVariable]])]), Boolean] = {
     //FIXME support simplification
     //FIXME support string expressions
     //FIXME support timeout
+    //FIXME suport reuseStructure
     val hard = hardClauses.map({ 
       case FormulaAST(formula) => formula
     })

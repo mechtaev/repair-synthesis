@@ -26,6 +26,7 @@ trait DecisionProcedure {
             softClauses: List[SolverInputFormula],
             components: List[Component],
             simplification: Boolean,
+            reuseStructure: Boolean,
             bound: Int,
             timeout: Int):
               Either[(Int, List[(ComponentVariable, Option[Value[ComponentVariable]])]), Boolean]
@@ -34,10 +35,11 @@ trait DecisionProcedure {
                softClauses: List[ComponentFormulaExpression],
                components: List[Component],
                simplification: Boolean,
+               reuseStructure: Boolean,
                bound: Int,
                timeout: Int):
               Either[(Int, List[(ComponentVariable, Option[Value[ComponentVariable]])]), Boolean] = {
-    solve(hardClauses.map(FormulaAST), softClauses.map(FormulaAST), components, simplification, bound, timeout)
+    solve(hardClauses.map(FormulaAST), softClauses.map(FormulaAST), components, simplification, reuseStructure, bound, timeout)
   }
 
 }

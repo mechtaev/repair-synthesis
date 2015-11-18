@@ -124,13 +124,17 @@ object MaxSMTPlay extends DecisionProcedure {
                      softClauses: List[SolverInputFormula],
                      components: List[Component],
                      simplification: Boolean,
+                     reuseStructure: Boolean,
                      bound: Int,
                      timeout: Int):
                        Either[(Int, List[(ComponentVariable, Option[Value[ComponentVariable]])]), Boolean] = {
-   val solver = new FuMalik(Some(bound)) with Circuit with Z3
-//    val solver = new Sat() with Z3
+    val solver = if (reuseStructure) {
+      new FuMalik(Some(bound)) with Circuit with Z3
+    } else {
+      new Sat() with Z3
+    }
+
     solver.init(Some(timeout))
-//    solver.init(None)
 
     vars.clear()
     val hard = hardClauses.map({
@@ -175,7 +179,7 @@ object MaxSMTPlay extends DecisionProcedure {
 
     if (Utils.verbose) println("[info] solving formula...")
     val result = solver.solveAndGetModel(soft, processedHard)
-    lastStat = SolverStat(unsatCores = solver.lastCores,
+    lastStat = SolverStat(unsatCores = Nil,//solver.lastCores,
                           hard = hardClauses.size,
                           soft = softClauses.size)
     val isTimeout = solver.solver.getReasonUnknown().equals("canceled")

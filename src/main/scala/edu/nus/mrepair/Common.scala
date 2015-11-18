@@ -38,6 +38,7 @@ case class VCCBenchmark(name: String,
                         
 case class SynthesisConfig(synthesisConfig: EncodingConfig,
                            simplification: Boolean,
+                           reuseStructure: Boolean,
                            spaceReduction: Boolean,
                            solverBound: Int,
                            solverTimeout: Int,

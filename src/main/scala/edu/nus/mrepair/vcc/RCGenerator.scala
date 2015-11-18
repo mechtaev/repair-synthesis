@@ -154,7 +154,7 @@ object RCGenerator {
     val RepairCondition(hardClauses, softClauses) = rc
 
     val solverResult =
-      MaxSMTPlay.solve(hardClauses, softClauses, components, repairConfig.simplification, repairConfig.solverBound, repairConfig.solverTimeout)
+      MaxSMTPlay.solve(hardClauses, softClauses, components, repairConfig.simplification, repairConfig.reuseStructure, repairConfig.solverBound, repairConfig.solverTimeout)
 
     // constructing patch:
     solverResult match {

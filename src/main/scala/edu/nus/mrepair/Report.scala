@@ -84,9 +84,10 @@ object Report {
                                        "phantomComponents")
 
   implicit def SynthesisConfigCodecJson : CodecJson[SynthesisConfig] =
-    casecodec6(SynthesisConfig.apply,
+    casecodec7(SynthesisConfig.apply,
                SynthesisConfig.unapply)("encodingConfig",
                                         "simplification",
+                                        "reuseStructure",
                                         "spaceReduction",
                                         "solverBound",
                                         "solverTimeout",
