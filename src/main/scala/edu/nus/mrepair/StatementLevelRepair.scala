@@ -212,7 +212,7 @@ object StatementLevelRepair {
       case ExtendedInequalities() =>
         IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
       case MixedConditional() =>
-        ??? /* TODO: this is for heartbleed */
+        IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp) ++ (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
     }
   }
 
