@@ -20,6 +20,7 @@ case class ExtendedArithmetic() extends ComponentLevel
 case class ExtendedLogic() extends ComponentLevel
 case class ExtendedInequalities() extends ComponentLevel
 case class MixedConditional() extends ComponentLevel
+case class ConditionalArithmetic() extends ComponentLevel
 
 object StatementLevelRepair {
 
@@ -213,6 +214,8 @@ object StatementLevelRepair {
         IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Equal() :: Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp)
       case MixedConditional() =>
         IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp) ++ (And() :: Not() :: Nil).map(ComponentLibrary.componentByOp) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
+      case ConditionalArithmetic() =>
+        ComponentLibrary.Standard.ite :: IntegerConstantComponent() :: VariableComponentSelector.select(stmtId, exeId) ++ (Greater() :: GreaterOrEqual() :: Nil).map(ComponentLibrary.componentByOp) ++ (Add() :: Neg() :: Nil).map(ComponentLibrary.componentByOp)
     }
   }
 
