@@ -22,6 +22,7 @@ object Z3Text extends DecisionProcedure {
       case And()            => "and"
       case Not()            => "not"
       case Equal()          => "="
+      case NotEqual()       => ???
       case Less()           => "<"
       case LessOrEqual()    => "<="
       case Greater()        => ">"

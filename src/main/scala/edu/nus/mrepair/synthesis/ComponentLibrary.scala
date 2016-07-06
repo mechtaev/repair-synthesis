@@ -24,6 +24,7 @@ object ComponentLibrary {
     def not     = componentByExpression(UnaryOperation(Not(), Variable(a)))
 
     def equal   = componentByExpression(BinaryOperation(Equal(), Variable(x), Variable(y)))
+    def notEqual = componentByExpression(BinaryOperation(NotEqual(), Variable(x), Variable(y)))
     def less    = componentByExpression(BinaryOperation(Less(), Variable(x), Variable(y)))
     def leq     = componentByExpression(BinaryOperation(LessOrEqual(), Variable(x), Variable(y)))
     def greater = componentByExpression(BinaryOperation(Greater(), Variable(x), Variable(y)))
@@ -48,6 +49,7 @@ object ComponentLibrary {
       case And()            => Standard.and
       case Not()            => Standard.not
       case Equal()          => Standard.equal
+      case NotEqual()       => Standard.notEqual
       case Less()           => Standard.less
       case LessOrEqual()    => Standard.leq
       case Greater()        => Standard.greater
@@ -73,7 +75,8 @@ object ComponentLibrary {
       case Iff()            => Nil
       case Or()             => And() :: Nil
       case And()            => Or() :: Nil
-      case Equal()          => Nil
+      case Equal()          => NotEqual() :: Nil
+      case NotEqual()       => Equal() :: Nil
       case Less()           => LessOrEqual() :: Nil
       case LessOrEqual()    => Less() :: Nil
       case Greater()        => GreaterOrEqual() :: Nil

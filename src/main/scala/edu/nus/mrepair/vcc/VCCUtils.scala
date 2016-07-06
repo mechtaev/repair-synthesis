@@ -31,7 +31,7 @@ object VCCUtils {
 
   private def builtinSymbols =
     Set("+", "-", "*", "/", ">", "<", ">=", "<=", "=",
-        "and", "or", "iff", "ite", "not", "=>", "xor",
+        "neq", "and", "or", "iff", "ite", "not", "=>", "xor",
         "select", "true", "false", "store")
 
   def renameExpr(e: IExpr, r: (String => String)): IExpr = {
@@ -123,6 +123,7 @@ object VCCUtils {
         case "or"  => Or()
         case "and" => And()
         case "="   => Equal()
+        case "neq" => NotEqual()
         case "<"   => Less()
         case "<="  => LessOrEqual()
         case ">"   => Greater()
@@ -190,6 +191,7 @@ object VCCUtils {
         case "or"  => Or()
         case "and" => And()
         case "="   => Equal()
+        case "neq" => NotEqual()
         case "<"   => Less()
         case "<="  => LessOrEqual()
         case ">"   => Greater()
@@ -280,6 +282,7 @@ object VCCUtils {
         case "or"  => Or()
         case "and" => And()
         case "="   => Equal()
+        case "neq" => NotEqual()
         case "<"   => Less()
         case "<="  => LessOrEqual()
         case ">"   => Greater()

@@ -115,6 +115,9 @@ object Formula {
   case class Equal() extends BinaryOperator {
     override def toString: String = "=="
   }
+  case class NotEqual() extends BinaryOperator {
+    override def toString: String = "!="
+  }
   case class Less() extends BinaryOperator {
     override def toString: String = "<"
   }

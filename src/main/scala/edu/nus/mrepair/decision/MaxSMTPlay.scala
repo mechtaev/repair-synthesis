@@ -37,6 +37,8 @@ object MaxSMTPlay extends DecisionProcedure {
         case (BinaryOperation(Equal(), _, _), List(l, r)) =>
 //          println("l: " + l + " r: " + r)
           z3.mkEq(l.asInstanceOf[Expr], r.asInstanceOf[Expr])
+        case (BinaryOperation(NotEqual(), _, _), List(l, r)) =>
+          z3.mkNot(z3.mkEq(l.asInstanceOf[Expr], r.asInstanceOf[Expr]))
         case (BinaryOperation(Less(), _, _), List(l, r)) =>
           z3.mkLt(l.asInstanceOf[ArithExpr], r.asInstanceOf[ArithExpr])
         case (BinaryOperation(LessOrEqual(), _, _), List(l, r)) =>
