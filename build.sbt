@@ -6,7 +6,7 @@ scalaVersion := "2.10.3"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
-javacOptions ++= Seq("-Xlint:unchecked")
+javacOptions ++= Seq("-Xlint:unchecked", "-encoding", "UTF-8")
 
 compileOrder := CompileOrder.JavaThenScala
 
